@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Incluye únicamente URLs reales, canónicas, indexables y con respuesta 200. -->
+  <url><loc>https://boticardo.es/</loc></url>
+  <url><loc>https://boticardo.es/catalogo</loc></url>
+  <url><loc>https://boticardo.es/medicamentos</loc></url>
+  <url><loc>https://boticardo.es/dermocosmetica</loc></url>
+  <url><loc>https://boticardo.es/vitaminas</loc></url>
+  <url><loc>https://boticardo.es/bebe</loc></url>
+  <url><loc>https://boticardo.es/higiene</loc></url>
+  <url><loc>https://boticardo.es/ofertas</loc></url>
+  <url><loc>https://boticardo.es/consejo</loc></url>
+  <url><loc>https://boticardo.es/contacto</loc></url>
+</urlset>
