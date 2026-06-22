@@ -473,6 +473,7 @@ p {
 
 .hero {
   background: var(--color-primary-dark);
+  /*background-image: url('img/landing/farmacia-boticardo.png');*/
   min-height: 470px;
   display: flex;
   align-items: center;
@@ -876,6 +877,28 @@ p {
 
 .product-card__add-btn:hover { background: var(--color-primary-dark); }
 .product-card__add-btn svg { width: 15px; height: 15px; }
+
+
+.product-card__add-btn2 {
+  width: 100%;
+  min-height: 38px;
+  border-radius: 6px;
+  background: var(--color-primary);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.product-card__add2-btn:hover { background: var(--color-primary-dark); }
+.product-card__add2-btn svg { width: 15px; height: 15px; }
+
+
+
+
 
 .products__cta {
   text-align: center;
@@ -1742,7 +1765,6 @@ p {
 
   .trust-bar__list,
   .shop-options__grid,
-  .products__grid,
   .footer__grid {
     grid-template-columns: 1fr;
   }
