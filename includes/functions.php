@@ -33,3 +33,29 @@ function getProductosMasVendidos(mysqli $conn): array
 
     return $productos;
 }
+/** Obtiene todos los productos del catálogo desde la Base de Datos */
+function getAllProductos(mysqli $conn): array
+{
+    $productos = [];
+    try {
+        // Obtenemos todos los productos ordenados alfabéticamente
+        $sql = "
+            SELECT p.nombre, p.precio, p.imagen, l.nombre AS marca
+            FROM productos p
+            LEFT JOIN laboratorios l ON p.laboratorio_id = l.id
+            ORDER BY p.nombre ASC
+        ";
+
+        $resultado = $conn->query($sql);
+
+        while ($producto = $resultado->fetch_assoc()) {
+            $productos[] = $producto;
+        }
+
+        $resultado->free();
+    } catch (Throwable $error) {
+        error_log('Boticardo - Error al cargar el catálogo: ' . $error->getMessage());
+    }
+
+    return $productos;
+}

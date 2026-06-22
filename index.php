@@ -99,7 +99,7 @@ $conn->close();
         <div class="container">
             <div class="header__inner">
 
-                <a href="/" class="header__logo" aria-label="Boticardo — Ir al inicio">
+                <a href="index.php" class="header__logo" aria-label="Boticardo — Ir al inicio">
                     <div class="header__logo-icon" aria-hidden="true">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M8 18v4M16 18v4M2 8h4M18 8h4M2 16h4M18 16h4"/><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
                     </div>
@@ -214,7 +214,7 @@ $conn->close();
                     </p>
 
                     <div class="hero__actions">
-                        <a href="/catalogo" class="hero__btn-primary">Ver el catálogo</a>
+                        <a href="catalogo.php" class="hero__btn-primary">Ver el catálogo</a>
                         <a href="/consejo" class="hero__btn-secondary">
                             Hablar con un farmacéutico
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -371,7 +371,7 @@ $conn->close();
                 <?php endif; ?>
             </div>
             <div class="products__cta">
-                <a href="/catalogo" class="btn btn--outline">Ver todos los productos</a>
+                <a href="catalogo.php" class="btn btn--outline">Ver todos los productos</a>
             </div>
 
         </div>
