@@ -35,13 +35,20 @@ $mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' . $mapsQuery;
 $mapsEmbedUrl = 'https://www.google.com/maps?q=' . $mapsQuery . '&output=embed';
 
 // --- IMÁGENES ---
-$heroImagePath = 'img/landing/...png';
+$heroImagePath = 'img/landing/persona.png';
 $heroImageExists = is_file(__DIR__ . '/../' . $heroImagePath);
 $socialImagePath = 'img/seo/boticardo-social-1200x630.jpg';
+$logo = 'img/identidad/logo.jpeg';
 $socialImageExists = is_file(__DIR__ . '/../' . $socialImagePath);
 $socialImageUrl = $siteUrl . '/' . $socialImagePath;
 
 // --- CREDENCIALES DE BASE DE DATOS ---
+//$host = getenv('DB_HOST') ?: 'localhost:3306';
+//$usuario = getenv('DB_USER') ?: 'boticardo';
+//$contrasena = getenv('DB_PASSWORD') ?: '2vJVif8iJa$_5nhp';
+//$baseDatos = getenv('DB_NAME') ?: 'boticardo_bd';
+
+
 define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
 define('DB_USER', getenv('DB_USER') ?: 'root');
 define('DB_PASSWORD', getenv('DB_PASSWORD') ?: '');

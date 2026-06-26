@@ -893,8 +893,8 @@ p {
   font-weight: 700;
 }
 
-.product-card__add2-btn:hover { background: var(--color-primary-dark); }
-.product-card__add2-btn svg { width: 15px; height: 15px; }
+.product-card__add-btn2:hover { background: var(--color-primary-dark); }
+.product-card__add-btn2 svg { width: 15px; height: 15px; }
 
 
 
@@ -1217,6 +1217,219 @@ p {
 .mt-12 { margin-top: 3rem; }
 
 /* ============================================================
+   LAYOUT DEL CATÁLOGO Y FILTROS
+   ============================================================ */
+.catalog-page {
+  padding-top: 3rem;
+  padding-bottom: 4rem;
+}
+
+.catalog-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.catalog-sidebar {
+  background: var(--color-bg-white, #fff);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  position: sticky;
+  top: 100px; /* Hace que los filtros bajen contigo al hacer scroll */
+}
+
+.filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filter-header h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text-main);
+  margin: 0;
+}
+
+.filter-reset {
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+  text-decoration: none; /* Como ahora es un enlace (<a>), le quitamos el subrayado por defecto si no lo quieres, o se lo dejas */
+}
+
+.filter-reset:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline;
+}
+
+.filter-group {
+  margin-bottom: 1.5rem;
+}
+
+.filter-group__title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-main);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+/* Checkboxes y Radios personalizados */
+.filter-checkbox {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.filter-checkbox:hover {
+  color: var(--color-primary-dark);
+}
+
+.filter-checkbox input[type="radio"],
+.filter-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary); /* Pone la bolita del color principal de tu marca */
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Campos de precio */
+.filter-price-range {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-price-range span {
+  color: var(--color-text-light);
+  font-weight: 600;
+}
+
+.price-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1; /* Hace que ambas cajas de precio midan lo mismo */
+}
+
+.price-input label {
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+}
+
+.filter-price-range > input,
+.price-input input {
+  width: 100%;
+  padding: 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: var(--color-text-main);
+  transition: border-color 0.2s ease;
+}
+
+.filter-price-range > input:focus,
+.price-input input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+/* Contenedor de los resultados */
+.catalog-results {
+  width: 100%;
+}
+
+/* Botón móvil para desplegar/plegar filtros */
+.catalog-filter-toggle {
+  display: none;
+}
+
+/* ============================================================
+   RESPONSIVE PARA EL CATÁLOGO (Tablets y Móviles)
+   ============================================================ */
+@media (max-width: 1024px) {
+  .catalog-layout {
+    grid-template-columns: 1fr; /* Colapsa la barra lateral y los productos a 1 sola columna */
+    gap: 2rem;
+  }
+
+  .catalog-sidebar {
+    position: static; /* Quita el sticky para que no estorbe al hacer scroll en el móvil */
+    margin-bottom: 1rem;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+@media (max-width: 768px) {
+  .catalog-sidebar {
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .catalog-filter-toggle {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-main);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .catalog-filter-toggle:hover,
+  .catalog-filter-toggle:focus-visible {
+    color: var(--color-primary-dark);
+  }
+
+  .catalog-filter-toggle:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+  }
+
+  .catalog-filter-toggle__icon {
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: transform 0.2s ease;
+  }
+
+  .catalog-filter-toggle[aria-expanded="true"] .catalog-filter-toggle__icon {
+    transform: rotate(180deg);
+  }
+
+  .catalog-sidebar .filter-form {
+    padding: 0 1rem 1rem;
+  }
+
+  .catalog-sidebar.catalog-sidebar--collapsed .filter-form,
+  #catalog-filter-form[hidden] {
+    display: none !important;
+  }
+}
+
+/* ============================================================
    RESPONSIVE OPTIMIZADO PARA MÓVIL
    ============================================================ */
 
@@ -1231,7 +1444,7 @@ p {
   }
 
   .hero__image-wrap {
-    justify-content: center;
+    display: none;
   }
 
   .trust-bar__list,
