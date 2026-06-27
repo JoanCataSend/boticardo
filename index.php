@@ -46,7 +46,7 @@ $conn->close();
                 <div class="hero__content">
                     <div class="hero__eyebrow">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                        Farmacéuticos colegiados
+                        Farmacéuticos colegiados · Envío en 24h
                     </div>
 
                     <h1 class="hero__title">
@@ -165,6 +165,7 @@ $conn->close();
                 <?php if ($productosMasVendidos): ?>
                     <?php foreach ($productosMasVendidos as $producto): ?>
                         <?php
+                        $productoId = (int) ($producto['id'] ?? 0);
                         $nombreProducto = (string) ($producto['nombre'] ?? 'Producto de farmacia');
                         $marcaProducto = (string) ($producto['marca'] ?: 'Boticardo');
                         $imagenProducto = basename((string) ($producto['imagen'] ?? 'placeholder.jpg'));
@@ -204,6 +205,7 @@ $conn->close();
                                         class="product-card__add-btn"
                                         type="button"
                                         aria-label="Añadir <?= e($nombreProducto) ?> al carrito"
+                                        data-product-id="<?= $productoId ?>"
                                         data-product-name="<?= e($nombreProducto) ?>"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>

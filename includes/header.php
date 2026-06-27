@@ -1,7 +1,13 @@
 <?php
+require_once __DIR__ . '/cart.php';
+require_once __DIR__ . '/auth.php';
+
 // Detectamos en qué página estamos para marcar el menú activo
 $currentPage = basename($_SERVER['PHP_SELF']);
 $catActiva = isset($_GET['categoria']) && $_GET['categoria'] !== '' ? (int)$_GET['categoria'] : null;
+$cartTotal = cartTotalQuantity();
+$currentUser = authCurrentUser();
+$searchQuery = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 ?>
 <!DOCTYPE html>
 <html lang="es-ES">
@@ -41,7 +47,7 @@ $catActiva = isset($_GET['categoria']) && $_GET['categoria'] !== '' ? (int)$_GET
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,700;1,400&display=swap" rel="stylesheet" />
 
-    <link rel="stylesheet" href="styles.css?v=2" />
+    <link rel="stylesheet" href="styles.css?v=5" />
 
     <?php if (!empty($structuredData)): ?>
         <script type="application/ld+json"><?= json_encode($structuredData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
@@ -73,23 +79,51 @@ $catActiva = isset($_GET['categoria']) && $_GET['categoria'] !== '' ? (int)$_GET
                     </div>
                 </a>
 
-                <form class="header__search" role="search" action="buscar.php" method="get">
+                <form class="header__search" role="search" action="buscar.php" method="get" autocomplete="off">
                     <label for="search-input" class="visually-hidden">Buscar productos en Boticardo</label>
                     <svg class="header__search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input id="search-input" name="q" class="header__search-input" type="search" placeholder="Busca medicamentos, vitaminas, cosmética…" autocomplete="off" enterkeyhint="search" minlength="2"/>
+                    <input
+                        id="search-input"
+                        name="q"
+                        class="header__search-input"
+                        type="search"
+                        value="<?= e($searchQuery) ?>"
+                        placeholder="Busca medicamentos, vitaminas, cosmética…"
+                        autocomplete="off"
+                        enterkeyhint="search"
+                        minlength="2"
+                        aria-autocomplete="list"
+                        aria-controls="search-suggestions"
+                    />
                     <button class="header__search-btn" type="submit">Buscar</button>
+                    <div class="header__search-suggestions" id="search-suggestions" role="listbox" aria-label="Sugerencias de búsqueda" hidden></div>
                 </form>
 
                 <div class="header__actions">
-                    <a href="carrito.php" id="cart-link" class="header__action-btn" aria-label="Carrito vacío">
+                    <a href="carrito.php" id="cart-link" class="header__action-btn" aria-label="<?= $cartTotal > 0 ? e('Carrito de compra (' . $cartTotal . ' ' . ($cartTotal === 1 ? 'producto' : 'productos') . ')') : 'Carrito vacío' ?>">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
-                        <span id="cart-count" class="header__cart-badge" aria-hidden="true" hidden style="display: none;">0</span>
+                        <span
+                            id="cart-count"
+                            class="header__cart-badge"
+                            aria-hidden="true"
+                            <?= $cartTotal > 0 ? '' : 'hidden style="display: none;"' ?>
+                        ><?= $cartTotal ?></span>
                     </a>
                     <span id="cart-status" class="visually-hidden" aria-live="polite"></span>
-                    <a href="login.php" class="header__user-btn" aria-label="Iniciar sesión en Boticardo">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        <span>Iniciar sesión</span>
-                    </a>
+                    <?php if ($currentUser): ?>
+                        <div class="header__account">
+                            <a href="cuenta.php" class="header__user-btn" aria-label="Mi cuenta en Boticardo">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <span><?= e($currentUser['nombre'] ?: 'Mi cuenta') ?></span>
+                            </a>
+                            <a href="logout.php" class="header__logout-link">Salir</a>
+                        </div>
+                    <?php else: ?>
+                        <a href="login.php" class="header__user-btn" aria-label="Iniciar sesión en Boticardo">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <span>Iniciar sesión</span>
+                        </a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

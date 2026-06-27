@@ -53,3 +53,20 @@ define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
 define('DB_USER', getenv('DB_USER') ?: 'root');
 define('DB_PASSWORD', getenv('DB_PASSWORD') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'boticardo_bd');
+// --- AUTENTICACIÓN Y PROVEEDORES SOCIALES ---
+$detectedScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$detectedHost = $_SERVER['HTTP_HOST'] ?? '';
+$detectedBasePath = isset($_SERVER['SCRIPT_NAME']) ? rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/') : '';
+$detectedBaseUrl = $detectedHost !== '' ? $detectedScheme . '://' . $detectedHost . ($detectedBasePath === '/' ? '' : $detectedBasePath) : $siteUrl;
+
+define('APP_BASE_URL', rtrim(getenv('APP_BASE_URL') ?: $detectedBaseUrl, '/'));
+
+define('GOOGLE_CLIENT_ID', getenv('GOOGLE_CLIENT_ID') ?: '');
+define('GOOGLE_CLIENT_SECRET', getenv('GOOGLE_CLIENT_SECRET') ?: '');
+define('GOOGLE_REDIRECT_URI', getenv('GOOGLE_REDIRECT_URI') ?: APP_BASE_URL . '/auth_callback.php?provider=google');
+
+define('APPLE_CLIENT_ID', getenv('APPLE_CLIENT_ID') ?: '');
+define('APPLE_TEAM_ID', getenv('APPLE_TEAM_ID') ?: '');
+define('APPLE_KEY_ID', getenv('APPLE_KEY_ID') ?: '');
+define('APPLE_PRIVATE_KEY', getenv('APPLE_PRIVATE_KEY') ?: '');
+define('APPLE_REDIRECT_URI', getenv('APPLE_REDIRECT_URI') ?: APP_BASE_URL . '/auth_callback.php?provider=apple');

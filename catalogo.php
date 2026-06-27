@@ -44,11 +44,11 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="catalog-layout">
                     <aside class="catalog-sidebar" id="catalog-filters">
                         <button
-                                class="catalog-filter-toggle"
-                                id="catalog-filter-toggle"
-                                type="button"
-                                aria-expanded="true"
-                                aria-controls="catalog-filter-form"
+                            class="catalog-filter-toggle"
+                            id="catalog-filter-toggle"
+                            type="button"
+                            aria-expanded="true"
+                            aria-controls="catalog-filter-form"
                         >
                             <span class="catalog-filter-toggle__text">Ocultar filtros</span>
                             <span class="catalog-filter-toggle__icon" aria-hidden="true">▾</span>
@@ -70,7 +70,12 @@ require_once __DIR__ . '/includes/header.php';
                                         <p class="product-card__price"><?= number_format((float)$producto['precio'], 2, ',', '.') ?> €</p>
                                     </div>
                                     <div class="product-card__footer" style="padding: 0 0.95rem 0.95rem;">
-                                        <button class="product-card__add-btn" type="button" data-product-name="<?= e($producto['nombre']) ?>">
+                                        <button
+                                            class="product-card__add-btn"
+                                            type="button"
+                                            data-product-id="<?= (int) $producto['id'] ?>"
+                                            data-product-name="<?= e($producto['nombre']) ?>"
+                                        >
                                             Añadir al carrito
                                         </button>
                                     </div>
@@ -89,22 +94,18 @@ require_once __DIR__ . '/includes/header.php';
         document.addEventListener('DOMContentLoaded', function () {
             const filterSidebar = document.getElementById('catalog-filters');
             const filterToggle = document.getElementById('catalog-filter-toggle');
-            const filterForm = document.getElementById('catalog-filter-form');
 
-            if (!filterSidebar || !filterToggle || !filterForm) return;
+            if (!filterSidebar || !filterToggle) return;
 
             const filterToggleText = filterToggle.querySelector('.catalog-filter-toggle__text');
             const mobileQuery = window.matchMedia('(max-width: 768px)');
 
             function setFilterState(isOpen) {
-                const shouldHideForm = mobileQuery.matches && !isOpen;
-
-                filterSidebar.classList.toggle('catalog-sidebar--collapsed', shouldHideForm);
-                filterForm.hidden = shouldHideForm;
-                filterToggle.setAttribute('aria-expanded', String(!shouldHideForm));
+                filterSidebar.classList.toggle('catalog-sidebar--collapsed', !isOpen);
+                filterToggle.setAttribute('aria-expanded', String(isOpen));
 
                 if (filterToggleText) {
-                    filterToggleText.textContent = shouldHideForm ? 'Mostrar filtros' : 'Ocultar filtros';
+                    filterToggleText.textContent = isOpen ? 'Ocultar filtros' : 'Mostrar filtros';
                 }
             }
 

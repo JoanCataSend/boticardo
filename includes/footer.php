@@ -56,51 +56,191 @@
         const cartBadge = document.getElementById('cart-count');
         const cartStatus = document.getElementById('cart-status');
         const addToCartButtons = document.querySelectorAll('.product-card__add-btn');
-        const storageKey = 'boticardoCartCount';
-
-        if (!cartLink || !cartBadge) return;
-
-        function readStoredCount() {
-            try {
-                const storedValue = localStorage.getItem(storageKey);
-                const parsedValue = Number.parseInt(storedValue ?? '0', 10);
-                return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : 0;
-            } catch (error) { return 0; }
-        }
-
-        function saveCount(count) {
-            try { localStorage.setItem(storageKey, String(count)); } catch (error) {}
-        }
 
         function updateCartBadge(count) {
-            const safeCount = Math.max(0, count);
+            if (!cartLink || !cartBadge) return;
+
+            const safeCount = Math.max(0, Number.parseInt(String(count), 10) || 0);
             cartBadge.textContent = String(safeCount);
+
             if (safeCount === 0) {
                 cartBadge.hidden = true;
                 cartBadge.style.display = 'none';
                 cartLink.setAttribute('aria-label', 'Carrito vacío');
                 return;
             }
+
             cartBadge.hidden = false;
             cartBadge.style.display = 'flex';
             cartLink.setAttribute('aria-label', `Carrito de compra (${safeCount} ${safeCount === 1 ? 'producto' : 'productos'})`);
         }
 
-        let cartCount = readStoredCount();
-        updateCartBadge(cartCount);
+        async function addProductToCart(productId) {
+            const response = await fetch('api/carrito_accion.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Accept': 'application/json'
+                },
+                body: new URLSearchParams({
+                    action: 'add',
+                    product_id: String(productId),
+                    quantity: '1'
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('No se pudo añadir el producto al carrito.');
+            }
+
+            return response.json();
+        }
 
         addToCartButtons.forEach(function (button) {
-            button.addEventListener('click', function () {
-                cartCount += 1;
-                saveCount(cartCount);
-                updateCartBadge(cartCount);
-                if (cartStatus) {
-                    const productName = button.dataset.productName || 'Producto';
-                    cartStatus.textContent = `${productName} añadido al carrito. Total: ${cartCount}.`;
+            button.addEventListener('click', async function () {
+                const productId = Number.parseInt(button.dataset.productId || '0', 10);
+                const productName = button.dataset.productName || 'Producto';
+
+                if (!productId) {
+                    if (cartStatus) cartStatus.textContent = 'No se pudo identificar el producto.';
+                    return;
+                }
+
+                button.disabled = true;
+                button.classList.add('product-card__add-btn--loading');
+
+                try {
+                    const data = await addProductToCart(productId);
+
+                    if (!data.ok) {
+                        throw new Error(data.message || 'No se pudo añadir el producto al carrito.');
+                    }
+
+                    updateCartBadge(data.cart_count);
+
+                    if (cartStatus) {
+                        cartStatus.textContent = `${productName} añadido al carrito. Total: ${data.cart_count}.`;
+                    }
+                } catch (error) {
+                    if (cartStatus) {
+                        cartStatus.textContent = error.message || 'No se pudo añadir el producto al carrito.';
+                    }
+                    alert(error.message || 'No se pudo añadir el producto al carrito.');
+                } finally {
+                    button.disabled = false;
+                    button.classList.remove('product-card__add-btn--loading');
                 }
             });
         });
     });
 </script>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchForm = document.querySelector('.header__search');
+        const searchInput = document.getElementById('search-input');
+        const suggestionsBox = document.getElementById('search-suggestions');
+
+        if (!searchForm || !searchInput || !suggestionsBox) return;
+
+        let debounceTimer = null;
+        let activeController = null;
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function hideSuggestions() {
+            suggestionsBox.hidden = true;
+            suggestionsBox.innerHTML = '';
+        }
+
+        function renderSuggestions(items, query) {
+            if (!items.length) {
+                suggestionsBox.innerHTML = `<div class="search-suggestion--empty">No hay sugerencias para “${escapeHtml(query)}”. Pulsa Buscar para ver resultados aproximados.</div>`;
+                suggestionsBox.hidden = false;
+                return;
+            }
+
+            suggestionsBox.innerHTML = items.map(function (item) {
+                return `
+                    <a class="search-suggestion" href="${escapeHtml(item.url)}" role="option">
+                        <img class="search-suggestion__image" src="${escapeHtml(item.imagen)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='img/productos/placeholder.jpg'">
+                        <span class="search-suggestion__content">
+                            <span class="search-suggestion__name">${escapeHtml(item.nombre)}</span>
+                            <span class="search-suggestion__brand">${escapeHtml(item.marca)}</span>
+                        </span>
+                        <span class="search-suggestion__price">${escapeHtml(item.precio)}</span>
+                    </a>
+                `;
+            }).join('');
+            suggestionsBox.hidden = false;
+        }
+
+        async function loadSuggestions(query) {
+            if (activeController) {
+                activeController.abort();
+            }
+
+            activeController = new AbortController();
+
+            const response = await fetch(`api/buscar_sugerencias.php?q=${encodeURIComponent(query)}`, {
+                headers: { 'Accept': 'application/json' },
+                signal: activeController.signal
+            });
+
+            if (!response.ok) {
+                throw new Error('No se pudieron cargar las sugerencias.');
+            }
+
+            return response.json();
+        }
+
+        searchInput.addEventListener('input', function () {
+            const query = searchInput.value.trim();
+
+            window.clearTimeout(debounceTimer);
+
+            if (query.length < 2) {
+                hideSuggestions();
+                return;
+            }
+
+            debounceTimer = window.setTimeout(async function () {
+                try {
+                    const data = await loadSuggestions(query);
+                    renderSuggestions(Array.isArray(data.items) ? data.items : [], query);
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        hideSuggestions();
+                    }
+                }
+            }, 220);
+        });
+
+        searchInput.addEventListener('focus', function () {
+            if (suggestionsBox.innerHTML.trim() !== '') {
+                suggestionsBox.hidden = false;
+            }
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!searchForm.contains(event.target)) {
+                hideSuggestions();
+            }
+        });
+
+        searchForm.addEventListener('submit', function () {
+            hideSuggestions();
+        });
+    });
+</script>
+
 </body>
 </html>
