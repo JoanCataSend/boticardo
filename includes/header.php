@@ -1,11 +1,13 @@
 <?php
 require_once __DIR__ . '/cart.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/favorites.php';
 
 // Detectamos en qué página estamos para marcar el menú activo
 $currentPage = basename($_SERVER['PHP_SELF']);
 $catActiva = isset($_GET['categoria']) && $_GET['categoria'] !== '' ? (int)$_GET['categoria'] : null;
 $cartTotal = cartTotalQuantity();
+$favoritesTotal = favoritesCount();
 $currentUser = authCurrentUser();
 $searchQuery = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 ?>
@@ -47,7 +49,7 @@ $searchQuery = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,700;1,400&display=swap" rel="stylesheet" />
 
-    <link rel="stylesheet" href="styles.css?v=8" />
+    <link rel="stylesheet" href="styles.css?v=18" />
 
     <?php if (!empty($structuredData)): ?>
         <script type="application/ld+json"><?= json_encode($structuredData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
@@ -100,6 +102,16 @@ $searchQuery = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                 </form>
 
                 <div class="header__actions">
+                    <a href="favoritos.php" id="favorites-link" class="header__action-btn header__favorite-link" aria-label="<?= $favoritesTotal > 0 ? e('Favoritos (' . $favoritesTotal . ' ' . ($favoritesTotal === 1 ? 'producto' : 'productos') . ')') : 'Favoritos vacíos' ?>">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                        <span
+                            id="favorites-count"
+                            class="header__cart-badge header__favorites-badge"
+                            aria-hidden="true"
+                            <?= $favoritesTotal > 0 ? '' : 'hidden style="display: none;"' ?>
+                        ><?= $favoritesTotal ?></span>
+                    </a>
+                    <span id="favorites-status" class="visually-hidden" aria-live="polite"></span>
                     <a href="carrito.php" id="cart-link" class="header__action-btn" aria-label="<?= $cartTotal > 0 ? e('Carrito de compra (' . $cartTotal . ' ' . ($cartTotal === 1 ? 'producto' : 'productos') . ')') : 'Carrito vacío' ?>">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
                         <span

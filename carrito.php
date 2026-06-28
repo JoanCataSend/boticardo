@@ -4,7 +4,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/cart.php';
-require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
 
 $pageTitle = 'Carrito de compra | Boticardo';
@@ -88,7 +87,6 @@ require_once __DIR__ . '/includes/header.php';
 
             <?php if ($cartItems === []): ?>
                 <div class="cart-empty">
-                    <div class="cart-empty__icon" aria-hidden="true">🛒</div>
                     <h2>Tu carrito está vacío</h2>
                     <p>Añade productos desde el catálogo o desde la página principal.</p>
                     <a href="catalogo.php" class="btn btn--primary">Ver productos</a>
@@ -132,15 +130,37 @@ require_once __DIR__ . '/includes/header.php';
 
                                 <div class="cart-item__quantity">
                                     <label for="quantity-<?= $productId ?>">Cantidad</label>
-                                    <input
-                                        id="quantity-<?= $productId ?>"
-                                        name="quantity[<?= $productId ?>]"
-                                        type="number"
-                                        min="0"
-                                        max="99"
-                                        value="<?= $productQuantity ?>"
-                                        inputmode="numeric"
-                                    />
+
+                                    <div class="cart-quantity-stepper" data-quantity-stepper>
+                                        <button
+                                            class="cart-quantity-stepper__btn"
+                                            type="button"
+                                            aria-label="Restar cantidad de <?= e($productName) ?>"
+                                            data-quantity-minus
+                                        >
+                                            −
+                                        </button>
+
+                                        <input
+                                            id="quantity-<?= $productId ?>"
+                                            name="quantity[<?= $productId ?>]"
+                                            type="number"
+                                            min="0"
+                                            max="99"
+                                            value="<?= $productQuantity ?>"
+                                            inputmode="numeric"
+                                            data-quantity-input
+                                        />
+
+                                        <button
+                                            class="cart-quantity-stepper__btn"
+                                            type="button"
+                                            aria-label="Sumar cantidad de <?= e($productName) ?>"
+                                            data-quantity-plus
+                                        >
+                                            +
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="cart-item__subtotal">
@@ -214,5 +234,35 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </section>
 </main>
+
+
+<script>
+document.addEventListener('click', function (event) {
+    const minusButton = event.target.closest('[data-quantity-minus]');
+    const plusButton = event.target.closest('[data-quantity-plus]');
+
+    if (!minusButton && !plusButton) {
+        return;
+    }
+
+    const stepper = event.target.closest('[data-quantity-stepper]');
+    if (!stepper) {
+        return;
+    }
+
+    const input = stepper.querySelector('[data-quantity-input]');
+    if (!input) {
+        return;
+    }
+
+    const min = Number.parseInt(input.getAttribute('min') || '0', 10);
+    const max = Number.parseInt(input.getAttribute('max') || '99', 10);
+    const current = Number.parseInt(input.value || '0', 10);
+    const nextValue = plusButton ? current + 1 : current - 1;
+
+    input.value = Math.min(max, Math.max(min, nextValue));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+});
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

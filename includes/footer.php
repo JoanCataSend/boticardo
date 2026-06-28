@@ -214,6 +214,98 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const favoriteButtons = document.querySelectorAll('.product-card__wishlist[data-favorite-product-id]');
+        const favoritesLink = document.getElementById('favorites-link');
+        const favoritesBadge = document.getElementById('favorites-count');
+        const favoritesStatus = document.getElementById('favorites-status');
+
+        function updateFavoritesBadge(count) {
+            if (!favoritesLink || !favoritesBadge) return;
+
+            const safeCount = Math.max(0, Number.parseInt(String(count), 10) || 0);
+            favoritesBadge.textContent = String(safeCount);
+
+            if (safeCount === 0) {
+                favoritesBadge.hidden = true;
+                favoritesBadge.style.display = 'none';
+                favoritesLink.setAttribute('aria-label', 'Favoritos vacíos');
+                return;
+            }
+
+            favoritesBadge.hidden = false;
+            favoritesBadge.style.display = 'flex';
+            favoritesLink.setAttribute('aria-label', `Favoritos (${safeCount} ${safeCount === 1 ? 'producto' : 'productos'})`);
+        }
+
+        function updateFavoriteButton(button, isFavorite) {
+            const productName = button.dataset.productName || 'Producto';
+            button.classList.toggle('product-card__wishlist--active', isFavorite);
+            button.setAttribute('aria-pressed', String(isFavorite));
+            button.setAttribute('aria-label', `${isFavorite ? 'Quitar' : 'Añadir'} ${productName} ${isFavorite ? 'de' : 'a'} favoritos`);
+        }
+
+        async function toggleFavorite(productId) {
+            const response = await fetch('api/favoritos_accion.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Accept': 'application/json'
+                },
+                body: new URLSearchParams({
+                    action: 'toggle',
+                    product_id: String(productId)
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('No se pudo actualizar favoritos.');
+            }
+
+            return response.json();
+        }
+
+        favoriteButtons.forEach(function (button) {
+            button.addEventListener('click', async function () {
+                const productId = Number.parseInt(button.dataset.favoriteProductId || '0', 10);
+                const productName = button.dataset.productName || 'Producto';
+
+                if (!productId) return;
+
+                button.disabled = true;
+                button.classList.add('product-card__wishlist--loading');
+
+                try {
+                    const data = await toggleFavorite(productId);
+
+                    if (!data.ok) {
+                        throw new Error(data.message || 'No se pudo actualizar favoritos.');
+                    }
+
+                    updateFavoriteButton(button, Boolean(data.is_favorite));
+                    updateFavoritesBadge(data.favorites_count);
+
+                    if (favoritesStatus) {
+                        favoritesStatus.textContent = data.is_favorite
+                            ? `${productName} añadido a favoritos.`
+                            : `${productName} quitado de favoritos.`;
+                    }
+                } catch (error) {
+                    if (favoritesStatus) {
+                        favoritesStatus.textContent = error.message || 'No se pudo actualizar favoritos.';
+                    }
+                    alert(error.message || 'No se pudo actualizar favoritos.');
+                } finally {
+                    button.disabled = false;
+                    button.classList.remove('product-card__wishlist--loading');
+                }
+            });
+        });
+    });
+</script>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
         const searchForm = document.querySelector('.header__search');
         const searchInput = document.getElementById('search-input');
         const suggestionsBox = document.getElementById('search-suggestions');

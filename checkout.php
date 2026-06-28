@@ -53,7 +53,7 @@ require_once __DIR__ . '/includes/header.php';
 
             <?php if (!$stripeConfigured): ?>
                 <div class="cart-notice cart-notice--warning" role="alert">
-                    Stripe todavía no está configurado. Falta añadir <strong>STRIPE_SECRET_KEY</strong> en el servidor. Puedes ver la página, pero el botón de pago está desactivado.
+                    Puedes ver la página, pero el botón de pago está desactivado.
                 </div>
             <?php endif; ?>
 
