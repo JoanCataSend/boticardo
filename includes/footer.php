@@ -73,6 +73,79 @@
             cartBadge.hidden = false;
             cartBadge.style.display = 'flex';
             cartLink.setAttribute('aria-label', `Carrito de compra (${safeCount} ${safeCount === 1 ? 'producto' : 'productos'})`);
+            animateCartBadge();
+        }
+
+        function animateCartBadge() {
+            if (!cartBadge || !cartLink) return;
+
+            const header = document.querySelector('.header');
+
+            cartBadge.classList.remove('header__cart-badge--bump');
+            cartLink.classList.remove('header__action-btn--cart-success');
+            if (header) header.classList.remove('header--cart-highlight');
+
+            void cartBadge.offsetWidth;
+
+            cartBadge.classList.add('header__cart-badge--bump');
+            cartLink.classList.add('header__action-btn--cart-success');
+            if (header) header.classList.add('header--cart-highlight');
+
+            window.setTimeout(function () {
+                cartBadge.classList.remove('header__cart-badge--bump');
+                cartLink.classList.remove('header__action-btn--cart-success');
+                if (header) header.classList.remove('header--cart-highlight');
+            }, 850);
+        }
+
+        function getCartToast() {
+            let toast = document.getElementById('cart-toast');
+
+            if (toast) return toast;
+
+            toast = document.createElement('div');
+            toast.id = 'cart-toast';
+            toast.className = 'cart-toast';
+            toast.setAttribute('role', 'status');
+            toast.setAttribute('aria-live', 'polite');
+            toast.innerHTML = `
+                <span class="cart-toast__icon" aria-hidden="true">✓</span>
+                <span class="cart-toast__text"></span>
+                <a class="cart-toast__link" href="carrito.php">Ver carrito</a>
+            `;
+            document.body.appendChild(toast);
+            return toast;
+        }
+
+        let cartToastTimer = null;
+
+        function showCartToast(message) {
+            const toast = getCartToast();
+            const toastText = toast.querySelector('.cart-toast__text');
+
+            if (toastText) {
+                toastText.textContent = message;
+            }
+
+            toast.classList.add('cart-toast--visible');
+            window.clearTimeout(cartToastTimer);
+            cartToastTimer = window.setTimeout(function () {
+                toast.classList.remove('cart-toast--visible');
+            }, 3200);
+        }
+
+        function showButtonAddedState(button) {
+            if (!button) return;
+
+            const originalHtml = button.dataset.originalHtml || button.innerHTML;
+            button.dataset.originalHtml = originalHtml;
+            button.classList.add('product-card__add-btn--added');
+            button.innerHTML = '✓ Añadido';
+
+            window.setTimeout(function () {
+                button.classList.remove('product-card__add-btn--added');
+                button.innerHTML = button.dataset.originalHtml || originalHtml;
+            }, 1400);
         }
 
         async function addProductToCart(productId) {
@@ -121,6 +194,9 @@
                     if (cartStatus) {
                         cartStatus.textContent = `${productName} añadido al carrito. Total: ${data.cart_count}.`;
                     }
+
+                    showButtonAddedState(button);
+                    showCartToast(`${productName} se ha añadido al carrito.`);
                 } catch (error) {
                     if (cartStatus) {
                         cartStatus.textContent = error.message || 'No se pudo añadir el producto al carrito.';
@@ -238,6 +314,31 @@
 
         searchForm.addEventListener('submit', function () {
             hideSuggestions();
+        });
+    });
+</script>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const header = document.querySelector('.header');
+
+        if (!header) return;
+
+        function updateMobileHeaderOffset() {
+            if (window.matchMedia('(max-width: 768px)').matches) {
+                document.body.style.setProperty('--mobile-header-height', `${Math.ceil(header.getBoundingClientRect().height)}px`);
+                document.body.classList.add('has-mobile-fixed-header');
+            } else {
+                document.body.style.removeProperty('--mobile-header-height');
+                document.body.classList.remove('has-mobile-fixed-header');
+            }
+        }
+
+        updateMobileHeaderOffset();
+        window.addEventListener('resize', updateMobileHeaderOffset, { passive: true });
+        window.addEventListener('orientationchange', function () {
+            window.setTimeout(updateMobileHeaderOffset, 250);
         });
     });
 </script>

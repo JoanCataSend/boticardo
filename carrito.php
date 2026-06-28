@@ -88,6 +88,7 @@ require_once __DIR__ . '/includes/header.php';
 
             <?php if ($cartItems === []): ?>
                 <div class="cart-empty">
+                    <div class="cart-empty__icon" aria-hidden="true">🛒</div>
                     <h2>Tu carrito está vacío</h2>
                     <p>Añade productos desde el catálogo o desde la página principal.</p>
                     <a href="catalogo.php" class="btn btn--primary">Ver productos</a>

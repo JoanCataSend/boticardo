@@ -15,6 +15,7 @@ function authEnsureUsuariosTable(mysqli $conn): void
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             nombre VARCHAR(120) NOT NULL,
             email VARCHAR(190) NOT NULL,
+            rol ENUM('cliente','admin') NOT NULL DEFAULT 'cliente',
             password_hash VARCHAR(255) NULL,
             google_sub VARCHAR(255) NULL,
             apple_sub VARCHAR(255) NULL,
@@ -26,6 +27,34 @@ function authEnsureUsuariosTable(mysqli $conn): void
             UNIQUE KEY uq_usuarios_apple_sub (apple_sub)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
+
+    authEnsureUsuariosColumns($conn);
+}
+
+function authUsuarioColumnExists(mysqli $conn, string $column): bool
+{
+    $stmt = $conn->prepare('
+        SELECT COUNT(*) AS total
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = "usuarios"
+          AND COLUMN_NAME = ?
+    ');
+    $stmt->bind_param('s', $column);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    $result->free();
+    $stmt->close();
+
+    return ((int) ($row['total'] ?? 0)) > 0;
+}
+
+function authEnsureUsuariosColumns(mysqli $conn): void
+{
+    if (!authUsuarioColumnExists($conn, 'rol')) {
+        $conn->query("ALTER TABLE usuarios ADD COLUMN rol ENUM('cliente','admin') NOT NULL DEFAULT 'cliente' AFTER email");
+    }
 }
 
 function authCsrfToken(): string
@@ -84,6 +113,38 @@ function authIsLoggedIn(): bool
     return authCurrentUser() !== null;
 }
 
+function authIsAdmin(): bool
+{
+    $user = authCurrentUser();
+    return $user !== null && ($user['rol'] ?? 'cliente') === 'admin';
+}
+
+function authRequireLogin(string $redirect = 'login.php'): void
+{
+    if (authIsLoggedIn()) {
+        return;
+    }
+
+    $current = $_SERVER['REQUEST_URI'] ?? 'index.php';
+    header('Location: ' . $redirect . '?redirect=' . rawurlencode(ltrim($current, '/')));
+    exit;
+}
+
+function authRequireAdmin(string $loginPath = 'login.php'): void
+{
+    if (!authIsLoggedIn()) {
+        $current = $_SERVER['REQUEST_URI'] ?? 'admin/index.php';
+        header('Location: ' . $loginPath . '?redirect=' . rawurlencode(ltrim($current, '/')));
+        exit;
+    }
+
+    if (!authIsAdmin()) {
+        http_response_code(403);
+        echo 'Acceso denegado. Esta zona es solo para administradores.';
+        exit;
+    }
+}
+
 if (!function_exists('isUserLoggedIn')) {
     function isUserLoggedIn(): bool
     {
@@ -99,6 +160,7 @@ function authSetSession(array $user): void
         'id' => (int) $user['id'],
         'nombre' => (string) ($user['nombre'] ?? ''),
         'email' => (string) ($user['email'] ?? ''),
+        'rol' => (string) ($user['rol'] ?? 'cliente'),
     ];
 
     // Compatibilidad con comprobaciones antiguas del carrito.
@@ -196,6 +258,7 @@ function authRegisterWithPassword(mysqli $conn, string $nombre, string $email, s
         'id' => $userId,
         'nombre' => $nombre,
         'email' => $email,
+        'rol' => 'cliente',
     ]);
 
     return ['ok' => true, 'message' => 'Cuenta creada correctamente.'];
@@ -606,6 +669,7 @@ function authLoginOrCreateSocialUser(mysqli $conn, string $provider, string $pro
                 'id' => $userId,
                 'nombre' => $name,
                 'email' => $email,
+                'rol' => 'cliente',
                 $column => $providerSub,
             ];
         }

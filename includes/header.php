@@ -47,7 +47,7 @@ $searchQuery = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,700;1,400&display=swap" rel="stylesheet" />
 
-    <link rel="stylesheet" href="styles.css?v=5" />
+    <link rel="stylesheet" href="styles.css?v=8" />
 
     <?php if (!empty($structuredData)): ?>
         <script type="application/ld+json"><?= json_encode($structuredData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
@@ -116,6 +116,9 @@ $searchQuery = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                 <span><?= e($currentUser['nombre'] ?: 'Mi cuenta') ?></span>
                             </a>
+                            <?php if (function_exists('authIsAdmin') && authIsAdmin()): ?>
+                                <a href="admin/index.php" class="header__admin-link">Admin</a>
+                            <?php endif; ?>
                             <a href="logout.php" class="header__logout-link">Salir</a>
                         </div>
                     <?php else: ?>
