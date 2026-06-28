@@ -46,7 +46,7 @@ $conn->close();
                 <div class="hero__content">
                     <div class="hero__eyebrow">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                        Farmacéuticos colegiados · Envío en 24h
+                        Farmacéuticos colegiados
                     </div>
 
                     <h1 class="hero__title">
@@ -65,12 +65,6 @@ $conn->close();
                             Hablar con un farmacéutico
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                         </a>
-                    </div>
-
-                    <div class="hero__dots" role="tablist" aria-label="Diapositivas del carrusel">
-                        <button class="hero__dot hero__dot--active" role="tab" aria-selected="true" aria-label="Diapositiva 1"></button>
-                        <button class="hero__dot" role="tab" aria-selected="false" aria-label="Diapositiva 2"></button>
-                        <button class="hero__dot" role="tab" aria-selected="false" aria-label="Diapositiva 3"></button>
                     </div>
                 </div>
 
@@ -172,6 +166,7 @@ $conn->close();
                         $precioNumero = (float) ($producto['precio'] ?? 0);
                         $precioMaquina = number_format($precioNumero, 2, '.', '');
                         $precioVisible = number_format($precioNumero, 2, ',', '.');
+                        $productUrl = productoUrl($productoId);
                         ?>
                         <article class="product-card" aria-labelledby="producto-<?= md5($nombreProducto) ?>">
                             <div class="product-card__image-wrap">
@@ -185,20 +180,22 @@ $conn->close();
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
                                 </button>
-                                <img
-                                        src="img/productos/<?= e($imagenProducto) ?>"
-                                        alt="<?= e($nombreProducto) ?> de <?= e($marcaProducto) ?>"
-                                        class="product-card__image"
-                                        width="600"
-                                        height="600"
-                                        loading="lazy"
-                                        decoding="async"
-                                        onerror="this.onerror=null;this.src='img/productos/placeholder.jpg'"
-                                />
+                                <a href="<?= e($productUrl) ?>" class="product-card__image-link" aria-label="Ver <?= e($nombreProducto) ?>">
+                                    <img
+                                            src="img/productos/<?= e($imagenProducto) ?>"
+                                            alt="<?= e($nombreProducto) ?> de <?= e($marcaProducto) ?>"
+                                            class="product-card__image"
+                                            width="600"
+                                            height="600"
+                                            loading="lazy"
+                                            decoding="async"
+                                            onerror="this.onerror=null;this.src='img/productos/placeholder.jpg'"
+                                    />
+                                </a>
                             </div>
                             <div class="product-card__body">
                                 <span class="product-card__brand"><?= e($marcaProducto) ?></span>
-                                <h3 class="product-card__name" id="producto-<?= md5($nombreProducto) ?>"><?= e($nombreProducto) ?></h3>
+                                <h3 class="product-card__name" id="producto-<?= md5($nombreProducto) ?>"><a href="<?= e($productUrl) ?>" class="product-card__name-link"><?= e($nombreProducto) ?></a></h3>
                                 <div class="product-card__pricing">
                                     <data class="product-card__price" value="<?= e($precioMaquina) ?>"><?= e($precioVisible) ?> €</data>
                                 </div>

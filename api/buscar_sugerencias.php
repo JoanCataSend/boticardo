@@ -30,7 +30,7 @@ try {
             'marca' => (string) ($producto['marca'] ?: 'Boticardo'),
             'precio' => number_format((float) ($producto['precio'] ?? 0), 2, ',', '.') . ' €',
             'imagen' => 'img/productos/' . basename((string) ($producto['imagen'] ?? 'placeholder.jpg')),
-            'url' => 'buscar.php?q=' . rawurlencode($nombre),
+            'url' => productoUrl((int) ($producto['id'] ?? 0)),
         ];
     }
 

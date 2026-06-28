@@ -63,6 +63,12 @@ require_once __DIR__ . '/includes/header.php';
                                 <?php
                                 $productoId = (int) ($producto['id'] ?? 0);
                                 $nombreProducto = (string) ($producto['nombre'] ?? 'Producto de farmacia');
+                                $marcaProducto = (string) ($producto['marca'] ?: 'Boticardo');
+                                $imagenProducto = basename((string) ($producto['imagen'] ?? 'placeholder.jpg'));
+                                $precioNumero = (float) ($producto['precio'] ?? 0);
+                                $precioMaquina = number_format($precioNumero, 2, '.', '');
+                                $precioVisible = number_format($precioNumero, 2, ',', '.');
+                                $productUrl = productoUrl($productoId);
                                 ?>
                                 <article class="product-card">
                                     <div class="product-card__image-wrap">
@@ -76,19 +82,30 @@ require_once __DIR__ . '/includes/header.php';
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
                                         </button>
-                                        <img src="img/productos/<?= e(basename($producto['imagen'])) ?>" alt="<?= e($producto['nombre']) ?>" class="product-card__image" loading="lazy">
+                                        <a href="<?= e($productUrl) ?>" class="product-card__image-link" aria-label="Ver <?= e($nombreProducto) ?>">
+                                            <img
+                                                src="img/productos/<?= e($imagenProducto) ?>"
+                                                alt="<?= e($nombreProducto) ?> de <?= e($marcaProducto) ?>"
+                                                class="product-card__image"
+                                                width="600"
+                                                height="600"
+                                                loading="lazy"
+                                                decoding="async"
+                                                onerror="this.onerror=null;this.src='img/productos/placeholder.jpg'"
+                                            />
+                                        </a>
                                     </div>
                                     <div class="product-card__body">
-                                        <span class="product-card__brand"><?= e($producto['marca'] ?: 'Boticardo') ?></span>
-                                        <h2 class="product-card__name"><?= e($producto['nombre']) ?></h2>
-                                        <p class="product-card__price"><?= number_format((float)$producto['precio'], 2, ',', '.') ?> €</p>
+                                        <span class="product-card__brand"><?= e($marcaProducto) ?></span>
+                                        <h2 class="product-card__name"><a href="<?= e($productUrl) ?>" class="product-card__name-link"><?= e($nombreProducto) ?></a></h2>
+                                        <p class="product-card__price"><?= e($precioVisible) ?> €</p>
                                     </div>
                                     <div class="product-card__footer" style="padding: 0 0.95rem 0.95rem;">
                                         <button
                                             class="product-card__add-btn"
                                             type="button"
-                                            data-product-id="<?= (int) $producto['id'] ?>"
-                                            data-product-name="<?= e($producto['nombre']) ?>"
+                                            data-product-id="<?= $productoId ?>"
+                                            data-product-name="<?= e($nombreProducto) ?>"
                                         >
                                             Añadir al carrito
                                         </button>

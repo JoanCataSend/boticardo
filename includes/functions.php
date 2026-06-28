@@ -7,6 +7,25 @@ function e(?string $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/** Comprueba de forma segura si existe una columna en una tabla. */
+function dbColumnExists(mysqli $conn, string $tableName, string $columnName): bool
+{
+    try {
+        $stmt = $conn->prepare("\n            SELECT COUNT(*) AS total\n            FROM INFORMATION_SCHEMA.COLUMNS\n            WHERE TABLE_SCHEMA = DATABASE()\n              AND TABLE_NAME = ?\n              AND COLUMN_NAME = ?\n            LIMIT 1\n        ");
+        $stmt->bind_param('ss', $tableName, $columnName);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $result->free();
+        $stmt->close();
+
+        return (int) ($row['total'] ?? 0) > 0;
+    } catch (Throwable $error) {
+        error_log('Boticardo - Error al comprobar columna de BD: ' . $error->getMessage());
+        return false;
+    }
+}
+
 /** Obtiene los productos más vendidos desde la Base de Datos */
 function getProductosMasVendidos(mysqli $conn): array
 {
@@ -109,6 +128,76 @@ function getProductoById(mysqli $conn, int $productId): ?array
         return null;
     }
 }
+
+
+/** Obtiene un producto con información ampliada para la ficha de producto. */
+function getProductoDetalleById(mysqli $conn, int $productId): ?array
+{
+    if ($productId <= 0) {
+        return null;
+    }
+
+    try {
+        $descripcionSelect = dbColumnExists($conn, 'productos', 'descripcion')
+            ? 'p.descripcion'
+            : 'NULL AS descripcion';
+
+        $stmt = $conn->prepare("\n            SELECT p.id, p.nombre, p.precio, p.imagen, p.categoria_id, {$descripcionSelect}, l.nombre AS marca\n            FROM productos p\n            LEFT JOIN laboratorios l ON p.laboratorio_id = l.id\n            WHERE p.id = ?\n            LIMIT 1\n        ");
+        $stmt->bind_param('i', $productId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $product = $result->fetch_assoc() ?: null;
+        $result->free();
+        $stmt->close();
+
+        return $product;
+    } catch (Throwable $error) {
+        error_log('Boticardo - Error al cargar detalle de producto: ' . $error->getMessage());
+        return null;
+    }
+}
+
+/** Devuelve productos relacionados de la misma categoría. */
+function getProductosRelacionados(mysqli $conn, int $productId, ?int $categoriaId = null, int $limit = 4): array
+{
+    if ($productId <= 0) {
+        return [];
+    }
+
+    $limit = max(1, min($limit, 12));
+    $productos = [];
+
+    try {
+        if ($categoriaId !== null && $categoriaId > 0) {
+            $stmt = $conn->prepare("\n                SELECT p.id, p.nombre, p.precio, p.imagen, l.nombre AS marca\n                FROM productos p\n                LEFT JOIN laboratorios l ON p.laboratorio_id = l.id\n                WHERE p.id <> ? AND p.categoria_id = ?\n                ORDER BY p.ventas_totales DESC, p.nombre ASC\n                LIMIT ?\n            ");
+            $stmt->bind_param('iii', $productId, $categoriaId, $limit);
+        } else {
+            $stmt = $conn->prepare("\n                SELECT p.id, p.nombre, p.precio, p.imagen, l.nombre AS marca\n                FROM productos p\n                LEFT JOIN laboratorios l ON p.laboratorio_id = l.id\n                WHERE p.id <> ?\n                ORDER BY p.ventas_totales DESC, p.nombre ASC\n                LIMIT ?\n            ");
+            $stmt->bind_param('ii', $productId, $limit);
+        }
+
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        while ($producto = $result->fetch_assoc()) {
+            $productos[] = $producto;
+        }
+
+        $result->free();
+        $stmt->close();
+    } catch (Throwable $error) {
+        error_log('Boticardo - Error al cargar productos relacionados: ' . $error->getMessage());
+    }
+
+    return $productos;
+}
+
+/** URL interna de ficha de producto. */
+function productoUrl(int $productId): string
+{
+    return 'producto.php?id=' . max(0, $productId);
+}
+
 /** Normaliza un texto para búsquedas: minúsculas, sin acentos y sin signos raros. */
 function normalizeSearchText(?string $text): string
 {

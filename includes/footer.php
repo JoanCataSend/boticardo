@@ -148,7 +148,8 @@
             }, 1400);
         }
 
-        async function addProductToCart(productId) {
+        async function addProductToCart(productId, quantity = 1) {
+            const safeQuantity = Math.max(1, Math.min(Number.parseInt(String(quantity), 10) || 1, 99));
             const response = await fetch('api/carrito_accion.php', {
                 method: 'POST',
                 headers: {
@@ -158,7 +159,7 @@
                 body: new URLSearchParams({
                     action: 'add',
                     product_id: String(productId),
-                    quantity: '1'
+                    quantity: String(safeQuantity)
                 })
             });
 
@@ -173,6 +174,13 @@
             button.addEventListener('click', async function () {
                 const productId = Number.parseInt(button.dataset.productId || '0', 10);
                 const productName = button.dataset.productName || 'Producto';
+                let quantity = 1;
+
+                if (button.dataset.quantityInput) {
+                    const quantityInput = document.getElementById(button.dataset.quantityInput);
+                    quantity = quantityInput ? Number.parseInt(quantityInput.value || '1', 10) : 1;
+                    quantity = Math.max(1, Math.min(quantity || 1, 99));
+                }
 
                 if (!productId) {
                     if (cartStatus) cartStatus.textContent = 'No se pudo identificar el producto.';
@@ -183,7 +191,7 @@
                 button.classList.add('product-card__add-btn--loading');
 
                 try {
-                    const data = await addProductToCart(productId);
+                    const data = await addProductToCart(productId, quantity);
 
                     if (!data.ok) {
                         throw new Error(data.message || 'No se pudo añadir el producto al carrito.');

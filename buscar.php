@@ -88,6 +88,7 @@ require_once __DIR__ . '/includes/header.php';
                         $precioNumero = (float) ($producto['precio'] ?? 0);
                         $precioMaquina = number_format($precioNumero, 2, '.', '');
                         $precioVisible = number_format($precioNumero, 2, ',', '.');
+                        $productUrl = productoUrl($productoId);
                         ?>
                         <article class="product-card" aria-labelledby="producto-busqueda-<?= md5((string) $productoId . $nombreProducto) ?>">
                             <div class="product-card__image-wrap">
@@ -101,20 +102,22 @@ require_once __DIR__ . '/includes/header.php';
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
                                 </button>
-                                <img
-                                    src="img/productos/<?= e($imagenProducto) ?>"
-                                    alt="<?= e($nombreProducto) ?> de <?= e($marcaProducto) ?>"
-                                    class="product-card__image"
-                                    width="600"
-                                    height="600"
-                                    loading="lazy"
-                                    decoding="async"
-                                    onerror="this.onerror=null;this.src='img/productos/placeholder.jpg'"
-                                >
+                                <a href="<?= e($productUrl) ?>" class="product-card__image-link" aria-label="Ver <?= e($nombreProducto) ?>">
+                                    <img
+                                        src="img/productos/<?= e($imagenProducto) ?>"
+                                        alt="<?= e($nombreProducto) ?> de <?= e($marcaProducto) ?>"
+                                        class="product-card__image"
+                                        width="600"
+                                        height="600"
+                                        loading="lazy"
+                                        decoding="async"
+                                        onerror="this.onerror=null;this.src='img/productos/placeholder.jpg'"
+                                    >
+                                </a>
                             </div>
                             <div class="product-card__body">
                                 <span class="product-card__brand"><?= e($marcaProducto) ?></span>
-                                <h2 class="product-card__name" id="producto-busqueda-<?= md5((string) $productoId . $nombreProducto) ?>"><?= e($nombreProducto) ?></h2>
+                                <h2 class="product-card__name" id="producto-busqueda-<?= md5((string) $productoId . $nombreProducto) ?>"><a href="<?= e($productUrl) ?>" class="product-card__name-link"><?= e($nombreProducto) ?></a></h2>
                                 <div class="product-card__pricing">
                                     <data class="product-card__price" value="<?= e($precioMaquina) ?>"><?= e($precioVisible) ?> €</data>
                                 </div>
