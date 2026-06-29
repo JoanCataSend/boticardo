@@ -112,8 +112,6 @@ require_once __DIR__ . '/includes/header.php';
                         <h2>Método de pago</h2>
                         <div class="payment-method-box">
                             <div class="payment-method-box__icons" aria-hidden="true">
-                                <span>💳</span>
-                                <span>📱</span>
                             </div>
                             <div>
                                 <strong>Tarjeta bancaria o Bizum</strong>
@@ -164,7 +162,7 @@ require_once __DIR__ . '/includes/header.php';
 
                     <div class="checkout-summary__total">
                         <span>Total</span>
-                        <strong><?= number_format($cartTotal, 2, ',', '.') ?> €</strong>
+                        <strong><?= number_format($cartSubtotal, 2, ',', '.') ?> €</strong>
                     </div>
 
                     <p class="checkout-security-note">
