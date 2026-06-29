@@ -12,6 +12,7 @@ authEnsureUsuariosTable($conn);
 $redirect = authSafeRedirect($_GET['redirect'] ?? $_POST['redirect'] ?? 'index.php');
 $error = '';
 $success = '';
+$verificationEmail = '';
 
 if (authIsLoggedIn()) {
     header('Location: ' . $redirect);
@@ -20,6 +21,10 @@ if (authIsLoggedIn()) {
 
 if (isset($_GET['registro']) && $_GET['registro'] === 'ok') {
     $success = 'Cuenta creada correctamente. Ya puedes continuar.';
+}
+
+if (isset($_GET['verificado']) && $_GET['verificado'] === 'ok') {
+    $success = 'Correo verificado correctamente. Ya puedes continuar.';
 }
 
 if (isset($_GET['error'])) {
@@ -47,6 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $error = (string) $result['message'];
+        if (!empty($result['needs_verification']) && !empty($result['email'])) {
+            $verificationEmail = (string) $result['email'];
+        }
     }
 }
 
@@ -71,7 +79,13 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
 
                 <?php if ($error !== ''): ?>
-                    <div class="auth-alert auth-alert--error" role="alert"><?= e($error) ?></div>
+                    <div class="auth-alert auth-alert--error" role="alert">
+                        <?= e($error) ?>
+                        <?php if ($verificationEmail !== ''): ?>
+                            <br>
+                            <a href="verificar-email.php?email=<?= e(rawurlencode($verificationEmail)) ?>&redirect=<?= e(rawurlencode($redirect)) ?>">Introducir código de verificación</a>
+                        <?php endif; ?>
+                    </div>
                 <?php endif; ?>
 
                 <?php if ($success !== ''): ?>

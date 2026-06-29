@@ -19,6 +19,10 @@ function authEnsureUsuariosTable(mysqli $conn): void
             password_hash VARCHAR(255) NULL,
             google_sub VARCHAR(255) NULL,
             apple_sub VARCHAR(255) NULL,
+            email_verificado TINYINT(1) NOT NULL DEFAULT 0,
+            email_verification_code_hash VARCHAR(255) NULL,
+            email_verification_expires_at DATETIME NULL,
+            email_verified_at DATETIME NULL,
             ultimo_login DATETIME NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -54,6 +58,23 @@ function authEnsureUsuariosColumns(mysqli $conn): void
 {
     if (!authUsuarioColumnExists($conn, 'rol')) {
         $conn->query("ALTER TABLE usuarios ADD COLUMN rol ENUM('cliente','admin') NOT NULL DEFAULT 'cliente' AFTER email");
+    }
+
+    if (!authUsuarioColumnExists($conn, 'email_verificado')) {
+        // Los usuarios antiguos se marcan como verificados para no bloquear cuentas ya existentes.
+        $conn->query("ALTER TABLE usuarios ADD COLUMN email_verificado TINYINT(1) NOT NULL DEFAULT 1 AFTER apple_sub");
+    }
+
+    if (!authUsuarioColumnExists($conn, 'email_verification_code_hash')) {
+        $conn->query("ALTER TABLE usuarios ADD COLUMN email_verification_code_hash VARCHAR(255) NULL AFTER email_verificado");
+    }
+
+    if (!authUsuarioColumnExists($conn, 'email_verification_expires_at')) {
+        $conn->query("ALTER TABLE usuarios ADD COLUMN email_verification_expires_at DATETIME NULL AFTER email_verification_code_hash");
+    }
+
+    if (!authUsuarioColumnExists($conn, 'email_verified_at')) {
+        $conn->query("ALTER TABLE usuarios ADD COLUMN email_verified_at DATETIME NULL AFTER email_verification_expires_at");
     }
 }
 
@@ -161,6 +182,7 @@ function authSetSession(array $user): void
         'nombre' => (string) ($user['nombre'] ?? ''),
         'email' => (string) ($user['email'] ?? ''),
         'rol' => (string) ($user['rol'] ?? 'cliente'),
+        'email_verificado' => (int) ($user['email_verificado'] ?? 1),
     ];
 
     // Compatibilidad con comprobaciones antiguas del carrito.
@@ -193,6 +215,136 @@ function authFindUserByEmail(mysqli $conn, string $email): ?array
     return $user;
 }
 
+function authUserEmailVerified(array $user): bool
+{
+    return !array_key_exists('email_verificado', $user) || (int) $user['email_verificado'] === 1;
+}
+
+function authGenerateEmailVerificationCode(): string
+{
+    return (string) random_int(100000, 999999);
+}
+
+function authSaveEmailVerificationCode(mysqli $conn, int $userId, string $code): void
+{
+    $codeHash = password_hash($code, PASSWORD_DEFAULT);
+
+    $stmt = $conn->prepare('
+        UPDATE usuarios
+        SET email_verificado = 0,
+            email_verification_code_hash = ?,
+            email_verification_expires_at = DATE_ADD(NOW(), INTERVAL 30 MINUTE),
+            email_verified_at = NULL
+        WHERE id = ?
+    ');
+    $stmt->bind_param('si', $codeHash, $userId);
+    $stmt->execute();
+    $stmt->close();
+}
+
+function authSendEmailVerificationCode(array $user, string $code): bool
+{
+    require_once __DIR__ . '/mailer.php';
+
+    return mailerSendEmailVerificationCode($user, $code);
+}
+
+function authCreateAndSendEmailVerificationCode(mysqli $conn, array $user): bool
+{
+    $code = authGenerateEmailVerificationCode();
+    authSaveEmailVerificationCode($conn, (int) $user['id'], $code);
+
+    return authSendEmailVerificationCode($user, $code);
+}
+
+function authResendEmailVerificationCode(mysqli $conn, string $email): array
+{
+    $email = strtolower(trim($email));
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return ['ok' => false, 'message' => 'Escribe un email válido para reenviar el código.'];
+    }
+
+    $user = authFindUserByEmail($conn, $email);
+
+    if (!$user) {
+        return ['ok' => false, 'message' => 'No existe ninguna cuenta pendiente con ese email.'];
+    }
+
+    if (authUserEmailVerified($user)) {
+        return ['ok' => false, 'message' => 'Este email ya está verificado. Puedes iniciar sesión.'];
+    }
+
+    $mailSent = authCreateAndSendEmailVerificationCode($conn, $user);
+
+    if (!$mailSent) {
+        return ['ok' => false, 'message' => 'No se pudo enviar el correo. Revisa la configuración de email del servidor.'];
+    }
+
+    return ['ok' => true, 'message' => 'Te hemos enviado un nuevo código de verificación.'];
+}
+
+function authVerifyEmailCode(mysqli $conn, string $email, string $code): array
+{
+    $email = strtolower(trim($email));
+    $code = trim($code);
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return ['ok' => false, 'message' => 'Escribe el email con el que te registraste.'];
+    }
+
+    if (!preg_match('/^\d{6}$/', $code)) {
+        return ['ok' => false, 'message' => 'El código debe tener 6 números.'];
+    }
+
+    $user = authFindUserByEmail($conn, $email);
+
+    if (!$user) {
+        return ['ok' => false, 'message' => 'No existe ninguna cuenta con ese email.'];
+    }
+
+    if (authUserEmailVerified($user)) {
+        authSetSession($user);
+        return ['ok' => true, 'message' => 'Tu correo ya estaba verificado.'];
+    }
+
+    $savedHash = (string) ($user['email_verification_code_hash'] ?? '');
+    $expiresAt = (string) ($user['email_verification_expires_at'] ?? '');
+
+    if ($savedHash === '') {
+        return ['ok' => false, 'message' => 'No hay ningún código activo. Solicita uno nuevo.'];
+    }
+
+    if ($expiresAt === '' || strtotime($expiresAt) < time()) {
+        return ['ok' => false, 'message' => 'El código ha caducado. Solicita uno nuevo.'];
+    }
+
+    if (!password_verify($code, $savedHash)) {
+        return ['ok' => false, 'message' => 'El código no es correcto.'];
+    }
+
+    $userId = (int) $user['id'];
+    $stmt = $conn->prepare('
+        UPDATE usuarios
+        SET email_verificado = 1,
+            email_verification_code_hash = NULL,
+            email_verification_expires_at = NULL,
+            email_verified_at = NOW(),
+            ultimo_login = NOW()
+        WHERE id = ?
+    ');
+    $stmt->bind_param('i', $userId);
+    $stmt->execute();
+    $stmt->close();
+
+    $verifiedUser = authFindUserByEmail($conn, $email);
+    if ($verifiedUser) {
+        authSetSession($verifiedUser);
+    }
+
+    return ['ok' => true, 'message' => 'Correo verificado correctamente.'];
+}
+
 function authLoginWithPassword(mysqli $conn, string $email, string $password): array
 {
     $email = strtolower(trim($email));
@@ -205,6 +357,15 @@ function authLoginWithPassword(mysqli $conn, string $email, string $password): a
 
     if (!$user || empty($user['password_hash']) || !password_verify($password, (string) $user['password_hash'])) {
         return ['ok' => false, 'message' => 'Email o contraseña incorrectos.'];
+    }
+
+    if (!authUserEmailVerified($user)) {
+        return [
+            'ok' => false,
+            'needs_verification' => true,
+            'email' => $email,
+            'message' => 'Antes de iniciar sesión tienes que verificar tu correo.',
+        ];
     }
 
     $stmt = $conn->prepare('UPDATE usuarios SET ultimo_login = NOW() WHERE id = ?');
@@ -246,22 +407,33 @@ function authRegisterWithPassword(mysqli $conn, string $nombre, string $email, s
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
     $stmt = $conn->prepare('
-        INSERT INTO usuarios (nombre, email, password_hash, ultimo_login)
-        VALUES (?, ?, ?, NOW())
+        INSERT INTO usuarios (nombre, email, password_hash, email_verificado, ultimo_login)
+        VALUES (?, ?, ?, 0, NULL)
     ');
     $stmt->bind_param('sss', $nombre, $email, $passwordHash);
     $stmt->execute();
     $userId = (int) $stmt->insert_id;
     $stmt->close();
 
-    authSetSession([
+    $user = [
         'id' => $userId,
         'nombre' => $nombre,
         'email' => $email,
         'rol' => 'cliente',
-    ]);
+        'email_verificado' => 0,
+    ];
 
-    return ['ok' => true, 'message' => 'Cuenta creada correctamente.'];
+    $mailSent = authCreateAndSendEmailVerificationCode($conn, $user);
+
+    return [
+        'ok' => true,
+        'requires_verification' => true,
+        'email' => $email,
+        'mail_sent' => $mailSent,
+        'message' => $mailSent
+            ? 'Cuenta creada. Te hemos enviado un código de verificación por email.'
+            : 'Cuenta creada, pero no se pudo enviar el email de verificación. Revisa la configuración de correo.',
+    ];
 }
 
 function authIsGoogleConfigured(): bool
@@ -652,14 +824,27 @@ function authLoginOrCreateSocialUser(mysqli $conn, string $provider, string $pro
         $user = authFindUserByEmail($conn, $email);
 
         if ($user) {
-            $stmt = $conn->prepare("UPDATE usuarios SET $column = ?, ultimo_login = NOW() WHERE id = ?");
+            $stmt = $conn->prepare("
+                UPDATE usuarios
+                SET $column = ?,
+                    email_verificado = 1,
+                    email_verification_code_hash = NULL,
+                    email_verification_expires_at = NULL,
+                    email_verified_at = COALESCE(email_verified_at, NOW()),
+                    ultimo_login = NOW()
+                WHERE id = ?
+            ");
             $userId = (int) $user['id'];
             $stmt->bind_param('si', $providerSub, $userId);
             $stmt->execute();
             $stmt->close();
             $user[$column] = $providerSub;
+            $user['email_verificado'] = 1;
         } else {
-            $stmt = $conn->prepare("INSERT INTO usuarios (nombre, email, $column, ultimo_login) VALUES (?, ?, ?, NOW())");
+            $stmt = $conn->prepare("
+                INSERT INTO usuarios (nombre, email, $column, email_verificado, email_verified_at, ultimo_login)
+                VALUES (?, ?, ?, 1, NOW(), NOW())
+            ");
             $stmt->bind_param('sss', $name, $email, $providerSub);
             $stmt->execute();
             $userId = (int) $stmt->insert_id;
@@ -670,15 +855,25 @@ function authLoginOrCreateSocialUser(mysqli $conn, string $provider, string $pro
                 'nombre' => $name,
                 'email' => $email,
                 'rol' => 'cliente',
+                'email_verificado' => 1,
                 $column => $providerSub,
             ];
         }
     } else {
-        $stmt = $conn->prepare('UPDATE usuarios SET ultimo_login = NOW() WHERE id = ?');
+        $stmt = $conn->prepare('
+            UPDATE usuarios
+            SET email_verificado = 1,
+                email_verification_code_hash = NULL,
+                email_verification_expires_at = NULL,
+                email_verified_at = COALESCE(email_verified_at, NOW()),
+                ultimo_login = NOW()
+            WHERE id = ?
+        ');
         $userId = (int) $user['id'];
         $stmt->bind_param('i', $userId);
         $stmt->execute();
         $stmt->close();
+        $user['email_verificado'] = 1;
     }
 
     authSetSession($user);

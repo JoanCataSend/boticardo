@@ -40,6 +40,45 @@ function mailerSendHtml(string $to, string $subject, string $html, ?string $plai
     return $ok;
 }
 
+
+function mailerBuildEmailVerificationHtml(array $user, string $code): string
+{
+    $name = trim((string) ($user['nombre'] ?? ''));
+    $email = (string) ($user['email'] ?? '');
+    $verifyUrl = '';
+
+    if (defined('APP_BASE_URL') && APP_BASE_URL !== '') {
+        $verifyUrl = rtrim((string) APP_BASE_URL, '/') . '/verificar-email.php?email=' . rawurlencode($email);
+    }
+
+    $hello = $name !== '' ? 'Hola ' . mailerEscape($name) . ',' : 'Hola,';
+    $verifyButton = $verifyUrl !== ''
+        ? '<p style="margin:24px 0 0;"><a href="' . mailerEscape($verifyUrl) . '" style="display:inline-block;background:#087f7a;color:#fff;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:700;">Verificar mi correo</a></p>'
+        : '';
+
+    return '<!doctype html><html lang="es"><body style="margin:0;background:#f4f7f6;font-family:Arial,sans-serif;color:#1f2937;">'
+        . '<div style="max-width:680px;margin:0 auto;padding:24px;">'
+        . '<div style="background:#ffffff;border-radius:18px;padding:26px;border:1px solid #dbe7e4;">'
+        . '<p style="margin:0 0 8px;color:#087f7a;font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:12px;">Verificación de cuenta</p>'
+        . '<h1 style="margin:0 0 18px;font-size:26px;color:#123c3a;">Confirma tu correo en Boticardo</h1>'
+        . '<p style="font-size:16px;line-height:1.55;margin:0 0 14px;">' . $hello . '</p>'
+        . '<p style="font-size:16px;line-height:1.55;margin:0 0 18px;">Introduce este código en la web para verificar que este correo te pertenece:</p>'
+        . '<div style="font-size:34px;font-weight:900;letter-spacing:8px;text-align:center;color:#087f7a;background:#ecf7f5;border:1px solid #bfe4de;border-radius:16px;padding:18px;margin:18px 0;">' . mailerEscape($code) . '</div>'
+        . '<p style="font-size:14px;line-height:1.55;color:#4b5563;margin:0;">Este código caduca en 30 minutos. Si no has creado una cuenta en Boticardo, puedes ignorar este correo.</p>'
+        . $verifyButton
+        . '</div></div></body></html>';
+}
+
+function mailerSendEmailVerificationCode(array $user, string $code): bool
+{
+    $to = (string) ($user['email'] ?? '');
+    $subject = 'Tu código de verificación de Boticardo';
+    $html = mailerBuildEmailVerificationHtml($user, $code);
+    $plain = 'Tu código de verificación de Boticardo es: ' . $code . '. Caduca en 30 minutos.';
+
+    return mailerSendHtml($to, $subject, $html, $plain);
+}
+
 function mailerBuildNewOrderHtml(array $order, array $items): string
 {
     $orderNumber = (string) ($order['public_id'] ?? $order['id'] ?? '');

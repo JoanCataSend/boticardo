@@ -21,9 +21,6 @@
             <div>
                 <p class="footer__col-title">Ayuda</p>
                 <ul class="footer__links" role="list">
-                    <li><a href="consejo.php" class="footer__link">Consejo farmacéutico</a></li>
-                    <li><a href="envios.php" class="footer__link">Envíos y entregas</a></li>
-                    <li><a href="devoluciones.php" class="footer__link">Devoluciones</a></li>
                     <li><a href="faq.php" class="footer__link">Preguntas frecuentes</a></li>
                     <li><a href="contacto.php" class="footer__link">Contacto</a></li>
                 </ul>
@@ -34,7 +31,6 @@
                     <li><a href="login.php" class="footer__link">Iniciar sesión</a></li>
                     <li><a href="registro.php" class="footer__link">Crear cuenta</a></li>
                     <li><a href="pedidos.php" class="footer__link">Mis pedidos</a></li>
-                    <li><a href="receta.php" class="footer__link">Receta electrónica</a></li>
                     <li><a href="favoritos.php" class="footer__link">Mis favoritos</a></li>
                 </ul>
             </div>

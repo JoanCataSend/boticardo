@@ -30,7 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
 
         if ($result['ok']) {
-            header('Location: ' . $redirect);
+            $verifyParams = http_build_query([
+                'email' => (string) ($result['email'] ?? ''),
+                'redirect' => $redirect,
+                'sent' => !empty($result['mail_sent']) ? '1' : '0',
+            ]);
+
+            header('Location: verificar-email.php?' . $verifyParams);
             exit;
         }
 
@@ -55,7 +61,7 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="auth-card__header">
                     <span class="section-header__eyebrow">Nueva cuenta</span>
                     <h1>Registrarse</h1>
-                    <p>Crea tu cuenta para guardar tus datos y finalizar compras más rápido.</p>
+                    <p>Crea tu cuenta y verifica tu correo para poder iniciar sesión.</p>
                 </div>
 
                 <?php if ($error !== ''): ?>
@@ -115,7 +121,7 @@ require_once __DIR__ . '/includes/header.php';
                         <input id="register-password-confirm" name="password_confirm" type="password" autocomplete="new-password" minlength="8" required>
                     </div>
 
-                    <button type="submit" class="btn btn--primary auth-submit">Crear cuenta</button>
+                    <button type="submit" class="btn btn--primary auth-submit">Crear cuenta y enviar código</button>
                 </form>
 
                 <p class="auth-switch">
