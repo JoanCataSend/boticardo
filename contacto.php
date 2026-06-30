@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/rate_limit.php';
 
 $pageTitle = 'Contacto | Boticardo';
 $pageDescription = 'Contacta con Boticardo, farmacia en Manzanera. Resuelve dudas sobre productos, pedidos, envíos o consejo farmacéutico.';
@@ -130,6 +131,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         || contactoHasHeaderInjection($formData['asunto'])
     ) {
         $errors[] = 'Los datos introducidos no son válidos.';
+    }
+
+    if (!$errors) {
+        $ipActual = rateLimitClientIp();
+        $emailRateLimit = rateLimitIdentifier($formData['email'], 'email-vacio');
+        $limiteIp = rateLimitConsume('contacto-ip', $ipActual, 5, 60 * 60);
+        $limiteEmail = rateLimitConsume('contacto-email', $emailRateLimit, 3, 60 * 60);
+
+        if (!$limiteIp['ok']) {
+            $errors[] = rateLimitMessage('envío de mensajes', (int) $limiteIp['retry_after']);
+        } elseif (!$limiteEmail['ok']) {
+            $errors[] = rateLimitMessage('envío de mensajes', (int) $limiteEmail['retry_after']);
+        }
     }
 
     if (!$errors) {

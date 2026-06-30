@@ -1,9 +1,8 @@
 <?php
 declare(strict_types=1);
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/session.php';
+boticardoStartSession();
 
 const BOTICARDO_USER_SESSION_KEY = 'boticardo_user';
 const BOTICARDO_AUTH_STATE_KEY = 'boticardo_auth_state';
@@ -175,7 +174,7 @@ if (!function_exists('isUserLoggedIn')) {
 
 function authSetSession(array $user): void
 {
-    session_regenerate_id(true);
+    boticardoRegenerateSession();
 
     $_SESSION[BOTICARDO_USER_SESSION_KEY] = [
         'id' => (int) $user['id'],
@@ -200,6 +199,9 @@ function authLogout(): void
         $_SESSION['cliente_id'],
         $_SESSION['logged_in']
     );
+
+    // Evita reutilizar el mismo ID de sesión después de cerrar sesión.
+    boticardoRegenerateSession();
 }
 
 function authFindUserByEmail(mysqli $conn, string $email): ?array

@@ -49,23 +49,33 @@ $socialImageExists = is_file(__DIR__ . '/../' . $socialImagePath);
 $socialImageUrl = $siteUrl . '/' . $socialImagePath;
 
 // --- CREDENCIALES DE BASE DE DATOS ---
-//$host = getenv('DB_HOST') ?: 'localhost:3306';
-//$usuario = getenv('DB_USER') ?: 'boticardo';
-//$contrasena = getenv('DB_PASSWORD') ?: '2vJVif8iJa$_5nhp';
-//$baseDatos = getenv('DB_NAME') ?: 'boticardo_bd';
 define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
 define('DB_USER', getenv('DB_USER') ?: 'root');
 define('DB_PASSWORD', getenv('DB_PASSWORD') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'boticardo_bd');
 // --- AUTENTICACIÓN Y PROVEEDORES SOCIALES ---
-$detectedScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$detectedHost = $_SERVER['HTTP_HOST'] ?? '';
-$detectedBasePath = isset($_SERVER['SCRIPT_NAME']) ? rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/') : '';
-// Si config.php se carga desde /api, /checkout, /webhooks o /admin, la URL base real sigue siendo la raíz del proyecto.
-$detectedBasePath = preg_replace('#/(api|checkout|webhooks|admin)$#', '', $detectedBasePath) ?: '';
-$detectedBaseUrl = $detectedHost !== '' ? $detectedScheme . '://' . $detectedHost . ($detectedBasePath === '/' ? '' : $detectedBasePath) : $siteUrl;
+$appBaseUrlEnv = trim((string) getenv('APP_BASE_URL'));
+$detectedHost = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+$isLocalHost = $detectedHost === 'localhost'
+    || $detectedHost === '127.0.0.1'
+    || $detectedHost === '[::1]'
+    || str_ends_with($detectedHost, '.local')
+    || str_ends_with($detectedHost, '.test');
 
-define('APP_BASE_URL', rtrim(getenv('APP_BASE_URL') ?: $detectedBaseUrl, '/'));
+// En producción NO se construye APP_BASE_URL desde HTTP_HOST para evitar ataques Host Header.
+// Usa APP_BASE_URL en el hosting si necesitas sobrescribir la URL pública.
+if ($appBaseUrlEnv !== '') {
+    $appBaseUrl = $appBaseUrlEnv;
+} elseif ($isLocalHost) {
+    $detectedScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $detectedBasePath = isset($_SERVER['SCRIPT_NAME']) ? rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/') : '';
+    $detectedBasePath = preg_replace('#/(api|checkout|webhooks|admin)$#', '', $detectedBasePath) ?: '';
+    $appBaseUrl = $detectedScheme . '://' . $detectedHost . ($detectedBasePath === '/' ? '' : $detectedBasePath);
+} else {
+    $appBaseUrl = $siteUrl;
+}
+
+define('APP_BASE_URL', rtrim($appBaseUrl, '/'));
 
 define('GOOGLE_CLIENT_ID', getenv('GOOGLE_CLIENT_ID') ?: '');
 define('GOOGLE_CLIENT_SECRET', getenv('GOOGLE_CLIENT_SECRET') ?: '');

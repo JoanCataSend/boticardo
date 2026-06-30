@@ -1,9 +1,8 @@
 <?php
 declare(strict_types=1);
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+require_once __DIR__ . '/session.php';
+boticardoStartSession();
 
 const BOTICARDO_CART_SESSION_KEY = 'boticardo_cart';
 

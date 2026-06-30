@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/cart.php';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/rate_limit.php';
 require_once __DIR__ . '/includes/db.php';
 
 authEnsureUsuariosTable($conn);
@@ -40,20 +41,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!authValidateCsrf($_POST['csrf_token'] ?? null)) {
         $error = 'La sesión ha caducado. Recarga la página e inténtalo otra vez.';
     } else {
-        $result = authLoginWithPassword(
-            $conn,
-            (string) ($_POST['email'] ?? ''),
-            (string) ($_POST['password'] ?? '')
-        );
+        $emailIntento = strtolower(trim((string) ($_POST['email'] ?? '')));
+        $ipActual = rateLimitClientIp();
 
-        if ($result['ok']) {
-            header('Location: ' . $redirect);
-            exit;
-        }
+        $limiteIp = rateLimitConsume('login-ip', $ipActual, 12, 15 * 60);
+        $limiteEmail = rateLimitConsume('login-email', rateLimitIdentifier($emailIntento, 'email-vacio'), 6, 15 * 60);
 
-        $error = (string) $result['message'];
-        if (!empty($result['needs_verification']) && !empty($result['email'])) {
-            $verificationEmail = (string) $result['email'];
+        if (!$limiteIp['ok']) {
+            $error = rateLimitMessage('inicio de sesión', (int) $limiteIp['retry_after']);
+        } elseif (!$limiteEmail['ok']) {
+            $error = rateLimitMessage('inicio de sesión', (int) $limiteEmail['retry_after']);
+        } else {
+            $result = authLoginWithPassword(
+                $conn,
+                $emailIntento,
+                (string) ($_POST['password'] ?? '')
+            );
+
+            if ($result['ok']) {
+                rateLimitReset('login-ip', $ipActual);
+                rateLimitReset('login-email', rateLimitIdentifier($emailIntento, 'email-vacio'));
+
+                header('Location: ' . $redirect);
+                exit;
+            }
+
+            $error = (string) $result['message'];
+            if (!empty($result['needs_verification']) && !empty($result['email'])) {
+                $verificationEmail = (string) $result['email'];
+            }
         }
     }
 }

@@ -4,8 +4,7 @@
             <div class="footer__brand">
                 <p class="footer__brand-name">Boticardo</p>
                 <p class="footer__brand-desc">
-                    Tu farmacia de confianza, ahora también online. Más de 10.000 productos
-                    con el asesoramiento de farmacéuticos colegiados.
+                    algo bonito que pondremos algun dia no tenemos que olvidarnossssss
                 </p>
             </div>
             <div>
@@ -22,6 +21,8 @@
                 <p class="footer__col-title">Ayuda</p>
                 <ul class="footer__links" role="list">
                     <li><a href="faq.php" class="footer__link">Preguntas frecuentes</a></li>
+                    <li><a href="envios-devoluciones.php" class="footer__link">Envíos y devoluciones</a></li>
+                    <li><a href="condiciones-compra.php" class="footer__link">Condiciones de compra</a></li>
                     <li><a href="contacto.php" class="footer__link">Contacto</a></li>
                 </ul>
             </div>
@@ -41,6 +42,8 @@
                 <a href="privacidad.php" class="footer__legal-link">Política de privacidad</a>
                 <a href="cookies.php" class="footer__legal-link">Cookies</a>
                 <a href="aviso-legal.php" class="footer__legal-link">Aviso legal</a>
+                <a href="condiciones-compra.php" class="footer__legal-link">Condiciones de compra</a>
+                <a href="envios-devoluciones.php" class="footer__legal-link">Envíos y devoluciones</a>
             </nav>
         </div>
     </div>
@@ -52,6 +55,7 @@
         const cartBadge = document.getElementById('cart-count');
         const cartStatus = document.getElementById('cart-status');
         const addToCartButtons = document.querySelectorAll('.product-card__add-btn');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
         function updateCartBadge(count) {
             if (!cartLink || !cartBadge) return;
@@ -150,12 +154,14 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-CSRF-Token': csrfToken
                 },
                 body: new URLSearchParams({
                     action: 'add',
                     product_id: String(productId),
-                    quantity: String(safeQuantity)
+                    quantity: String(safeQuantity),
+                    csrf_token: csrfToken
                 })
             });
 
@@ -222,6 +228,7 @@
         const favoritesLink = document.getElementById('favorites-link');
         const favoritesBadge = document.getElementById('favorites-count');
         const favoritesStatus = document.getElementById('favorites-status');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
         function updateFavoritesBadge(count) {
             if (!favoritesLink || !favoritesBadge) return;
@@ -253,11 +260,13 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-CSRF-Token': csrfToken
                 },
                 body: new URLSearchParams({
                     action: 'toggle',
-                    product_id: String(productId)
+                    product_id: String(productId),
+                    csrf_token: csrfToken
                 })
             });
 

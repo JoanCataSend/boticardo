@@ -53,10 +53,83 @@ function getProductosMasVendidos(mysqli $conn): array
     return $productos;
 }
 
+/** Enlaza parámetros dinámicos a una consulta preparada de mysqli. */
+function dbBindDynamicParams(mysqli_stmt $stmt, string $types, array &$params): void
+{
+    if ($types === '' || $params === []) {
+        return;
+    }
+
+    $bindValues = [$types];
+
+    foreach ($params as $index => $value) {
+        $bindValues[] = &$params[$index];
+    }
+
+    call_user_func_array([$stmt, 'bind_param'], $bindValues);
+}
+
+/** Obtiene las marcas/laboratorios disponibles desde la Base de Datos. */
+function getMarcasDisponibles(mysqli $conn, ?int $categoria_id = null, ?float $min_price = null, ?float $max_price = null): array
+{
+    $marcas = [];
+
+    try {
+        $sql = "
+            SELECT l.nombre, COUNT(p.id) AS total_productos
+            FROM laboratorios l
+            INNER JOIN productos p ON p.laboratorio_id = l.id
+            WHERE 1=1
+        ";
+        $types = '';
+        $params = [];
+
+        if ($categoria_id !== null && $categoria_id > 0) {
+            $sql .= " AND p.categoria_id = ?";
+            $types .= 'i';
+            $params[] = $categoria_id;
+        }
+
+        if ($min_price !== null && $min_price >= 0) {
+            $sql .= " AND p.precio >= ?";
+            $types .= 'd';
+            $params[] = $min_price;
+        }
+
+        if ($max_price !== null && $max_price >= 0) {
+            $sql .= " AND p.precio <= ?";
+            $types .= 'd';
+            $params[] = $max_price;
+        }
+
+        $sql .= "
+            GROUP BY l.id, l.nombre
+            ORDER BY l.nombre ASC
+        ";
+
+        $stmt = $conn->prepare($sql);
+        dbBindDynamicParams($stmt, $types, $params);
+        $stmt->execute();
+        $resultado = $stmt->get_result();
+
+        while ($marca = $resultado->fetch_assoc()) {
+            $marcas[] = $marca;
+        }
+
+        $resultado->free();
+        $stmt->close();
+    } catch (Throwable $error) {
+        error_log('Boticardo - Error al cargar marcas disponibles: ' . $error->getMessage());
+    }
+
+    return $marcas;
+}
+
 /** Obtiene todos los productos del catálogo filtrados por categoría, precio y marca */
 function getAllProductos(mysqli $conn, ?int $categoria_id = null, ?float $min_price = null, ?float $max_price = null, ?string $marca = null): array
 {
     $productos = [];
+
     try {
         $sql = "
             SELECT p.id, p.nombre, p.precio, p.imagen, l.nombre AS marca
@@ -64,36 +137,46 @@ function getAllProductos(mysqli $conn, ?int $categoria_id = null, ?float $min_pr
             LEFT JOIN laboratorios l ON p.laboratorio_id = l.id
             WHERE 1=1
         ";
+        $types = '';
+        $params = [];
 
-        // Filtro de Categoría
         if ($categoria_id !== null && $categoria_id > 0) {
-            $sql .= " AND p.categoria_id = " . $categoria_id;
+            $sql .= " AND p.categoria_id = ?";
+            $types .= 'i';
+            $params[] = $categoria_id;
         }
 
-        // Filtro de Precio Mínimo
-        if ($min_price !== null) {
-            $sql .= " AND p.precio >= " . $min_price;
+        if ($min_price !== null && $min_price >= 0) {
+            $sql .= " AND p.precio >= ?";
+            $types .= 'd';
+            $params[] = $min_price;
         }
 
-        // Filtro de Precio Máximo
-        if ($max_price !== null) {
-            $sql .= " AND p.precio <= " . $max_price;
+        if ($max_price !== null && $max_price >= 0) {
+            $sql .= " AND p.precio <= ?";
+            $types .= 'd';
+            $params[] = $max_price;
         }
 
-        // Filtro de Marca
-        if ($marca !== null) {
-            $sql .= " AND l.nombre = '" . $conn->real_escape_string($marca) . "'";
+        if ($marca !== null && trim($marca) !== '') {
+            $sql .= " AND l.nombre = ?";
+            $types .= 's';
+            $params[] = trim($marca);
         }
 
         $sql .= " ORDER BY p.nombre ASC";
 
-        $resultado = $conn->query($sql);
+        $stmt = $conn->prepare($sql);
+        dbBindDynamicParams($stmt, $types, $params);
+        $stmt->execute();
+        $resultado = $stmt->get_result();
 
         while ($producto = $resultado->fetch_assoc()) {
             $productos[] = $producto;
         }
 
         $resultado->free();
+        $stmt->close();
     } catch (Throwable $error) {
         error_log('Boticardo - Error al cargar el catálogo: ' . $error->getMessage());
     }

@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/cart.php';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/rate_limit.php';
 require_once __DIR__ . '/includes/db.php';
 
 authEnsureUsuariosTable($conn);
@@ -21,26 +22,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!authValidateCsrf($_POST['csrf_token'] ?? null)) {
         $error = 'La sesión ha caducado. Recarga la página e inténtalo otra vez.';
     } else {
-        $result = authRegisterWithPassword(
-            $conn,
-            (string) ($_POST['nombre'] ?? ''),
-            (string) ($_POST['email'] ?? ''),
-            (string) ($_POST['password'] ?? ''),
-            (string) ($_POST['password_confirm'] ?? '')
-        );
+        $emailIntento = strtolower(trim((string) ($_POST['email'] ?? '')));
+        $ipActual = rateLimitClientIp();
 
-        if ($result['ok']) {
-            $verifyParams = http_build_query([
-                'email' => (string) ($result['email'] ?? ''),
-                'redirect' => $redirect,
-                'sent' => !empty($result['mail_sent']) ? '1' : '0',
-            ]);
+        $limiteIp = rateLimitConsume('registro-ip', $ipActual, 5, 60 * 60);
+        $limiteEmail = rateLimitConsume('registro-email', rateLimitIdentifier($emailIntento, 'email-vacio'), 3, 60 * 60);
 
-            header('Location: verificar-email.php?' . $verifyParams);
-            exit;
+        if (!$limiteIp['ok']) {
+            $error = rateLimitMessage('registro', (int) $limiteIp['retry_after']);
+        } elseif (!$limiteEmail['ok']) {
+            $error = rateLimitMessage('registro', (int) $limiteEmail['retry_after']);
+        } else {
+            $result = authRegisterWithPassword(
+                $conn,
+                (string) ($_POST['nombre'] ?? ''),
+                $emailIntento,
+                (string) ($_POST['password'] ?? ''),
+                (string) ($_POST['password_confirm'] ?? '')
+            );
+
+            if ($result['ok']) {
+                $verifyParams = http_build_query([
+                    'email' => (string) ($result['email'] ?? ''),
+                    'redirect' => $redirect,
+                    'sent' => !empty($result['mail_sent']) ? '1' : '0',
+                ]);
+
+                header('Location: verificar-email.php?' . $verifyParams);
+                exit;
+            }
+
+            $error = (string) $result['message'];
         }
-
-        $error = (string) $result['message'];
     }
 }
 

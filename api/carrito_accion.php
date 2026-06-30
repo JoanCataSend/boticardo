@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/cart.php';
 require_once __DIR__ . '/../includes/db.php';
 
@@ -21,6 +22,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         'message' => 'Método no permitido.',
         'cart_count' => cartTotalQuantity(),
     ], 405);
+}
+
+$csrfToken = (string) ($_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
+
+if (!authValidateCsrf($csrfToken)) {
+    cartJsonResponse([
+        'ok' => false,
+        'message' => 'Sesión caducada. Recarga la página e inténtalo de nuevo.',
+        'cart_count' => cartTotalQuantity(),
+    ], 403);
 }
 
 $action = (string) ($_POST['action'] ?? '');

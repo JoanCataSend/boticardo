@@ -27,6 +27,7 @@ if ($categoria_id && isset($categoriasInfo[$categoria_id])) {
     $pageTitle = $tituloSeccion . ' | Boticardo';
 }
 
+$marcasDisponibles = getMarcasDisponibles($conn, $categoria_id, $min_price, $max_price);
 $todosLosProductos = getAllProductos($conn, $categoria_id, $min_price, $max_price, $marca);
 $conn->close();
 

@@ -34,14 +34,27 @@
     <!-- Marcas -->
     <div class="filter-group">
         <h3 class="filter-group__title">Marca</h3>
-        <?php
-        $marcasDisponibles = ['Boticardo', 'Isdin', 'Cerave', 'Suavinex'];
-        foreach ($marcasDisponibles as $m): ?>
-            <label class="filter-checkbox">
-                <input type="radio" name="marca" value="<?= e($m) ?>" <?= (isset($marca) && $marca === $m) ? 'checked' : '' ?>>
-                <?= e($m) ?>
-            </label>
-        <?php endforeach; ?>
+        <label class="filter-checkbox">
+            <input type="radio" name="marca" value="" <?= empty($marca) ? 'checked' : '' ?>>
+            Todas las marcas
+        </label>
+        <?php if (!empty($marcasDisponibles)): ?>
+            <?php foreach ($marcasDisponibles as $marcaDisponible): ?>
+                <?php
+                $nombreMarca = (string) ($marcaDisponible['nombre'] ?? '');
+                $totalMarca = (int) ($marcaDisponible['total_productos'] ?? 0);
+                ?>
+                <?php if ($nombreMarca !== ''): ?>
+                    <label class="filter-checkbox">
+                        <input type="radio" name="marca" value="<?= e($nombreMarca) ?>" <?= (isset($marca) && $marca === $nombreMarca) ? 'checked' : '' ?>>
+                        <?= e($nombreMarca) ?>
+                        <span class="filter-count">(<?= $totalMarca ?>)</span>
+                    </label>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <p class="filter-empty">No hay marcas disponibles.</p>
+        <?php endif; ?>
     </div>
 
     <button type="submit" class="btn btn--primary" style="width: 100%; margin-top: 1rem;">Aplicar</button>

@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/cart.php';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/rate_limit.php';
 require_once __DIR__ . '/includes/db.php';
 
 authEnsureUsuariosTable($conn);
@@ -32,29 +33,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'La sesión ha caducado. Recarga la página e inténtalo otra vez.';
     } else {
         $action = (string) ($_POST['action'] ?? 'verify');
+        $ipActual = rateLimitClientIp();
+        $emailRateLimit = rateLimitIdentifier($emailVerificacion, 'email-vacio');
 
         if ($action === 'resend') {
-            $result = authResendEmailVerificationCode($conn, $emailVerificacion);
+            $limiteIp = rateLimitConsume('verificacion-reenvio-ip', $ipActual, 4, 60 * 60);
+            $limiteEmail = rateLimitConsume('verificacion-reenvio-email', $emailRateLimit, 3, 30 * 60);
 
-            if ($result['ok']) {
-                $success = (string) $result['message'];
-                $error = '';
+            if (!$limiteIp['ok']) {
+                $error = rateLimitMessage('reenvío de código', (int) $limiteIp['retry_after']);
+            } elseif (!$limiteEmail['ok']) {
+                $error = rateLimitMessage('reenvío de código', (int) $limiteEmail['retry_after']);
             } else {
-                $error = (string) $result['message'];
+                $result = authResendEmailVerificationCode($conn, $emailVerificacion);
+
+                if ($result['ok']) {
+                    $success = (string) $result['message'];
+                    $error = '';
+                } else {
+                    $error = (string) $result['message'];
+                }
             }
         } else {
-            $result = authVerifyEmailCode(
-                $conn,
-                $emailVerificacion,
-                (string) ($_POST['codigo'] ?? '')
-            );
+            $limiteIp = rateLimitConsume('verificacion-codigo-ip', $ipActual, 20, 15 * 60);
+            $limiteEmail = rateLimitConsume('verificacion-codigo-email', $emailRateLimit, 8, 15 * 60);
 
-            if ($result['ok']) {
-                header('Location: ' . $redirect);
-                exit;
+            if (!$limiteIp['ok']) {
+                $error = rateLimitMessage('verificación de código', (int) $limiteIp['retry_after']);
+            } elseif (!$limiteEmail['ok']) {
+                $error = rateLimitMessage('verificación de código', (int) $limiteEmail['retry_after']);
+            } else {
+                $result = authVerifyEmailCode(
+                    $conn,
+                    $emailVerificacion,
+                    (string) ($_POST['codigo'] ?? '')
+                );
+
+                if ($result['ok']) {
+                    rateLimitReset('verificacion-codigo-ip', $ipActual);
+                    rateLimitReset('verificacion-codigo-email', $emailRateLimit);
+
+                    header('Location: ' . $redirect);
+                    exit;
+                }
+
+                $error = (string) $result['message'];
             }
-
-            $error = (string) $result['message'];
         }
     }
 }

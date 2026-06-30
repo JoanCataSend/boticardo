@@ -2,10 +2,9 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/session.php';
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+boticardoStartSession();
 
 function favoritesNormalizeId(int $productId): int
 {

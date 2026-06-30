@@ -20,6 +20,7 @@ $searchQuery = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <meta name="description" content="<?= e($pageDescription ?? '') ?>" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="theme-color" content="#6BBFB5" />
+    <meta name="csrf-token" content="<?= e(authCsrfToken()) ?>" />
 
     <?php if (isset($canonicalUrl)): ?>
         <link rel="canonical" href="<?= e($canonicalUrl) ?>" />

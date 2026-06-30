@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/cart.php';
 require_once __DIR__ . '/includes/db.php';
 
@@ -11,11 +12,14 @@ $pageDescription = 'Revisa los productos añadidos al carrito de Boticardo antes
 $canonicalUrl = $siteUrl . '/carrito.php';
 
 $checkoutNeedsLogin = false;
+$cartCsrfError = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
 
-    if ($action === 'update_quantities') {
+    if (!authValidateCsrf($_POST['csrf_token'] ?? null)) {
+        $cartCsrfError = true;
+    } elseif ($action === 'update_quantities') {
         $quantities = $_POST['quantity'] ?? [];
 
         if (is_array($quantities)) {
@@ -26,21 +30,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         header('Location: carrito.php?actualizado=1');
         exit;
-    }
-
-    if ($action === 'remove') {
+    } elseif ($action === 'remove') {
         cartRemoveProduct((int) ($_POST['product_id'] ?? 0));
         header('Location: carrito.php?eliminado=1');
         exit;
-    }
-
-    if ($action === 'clear') {
+    } elseif ($action === 'clear') {
         cartClear();
         header('Location: carrito.php?vaciado=1');
         exit;
-    }
-
-    if ($action === 'checkout') {
+    } elseif ($action === 'checkout') {
         if (!isUserLoggedIn()) {
             $checkoutNeedsLogin = true;
         } else {
@@ -72,7 +70,11 @@ require_once __DIR__ . '/includes/header.php';
                 </p>
             </div>
 
-            <?php if ($checkoutNeedsLogin): ?>
+            <?php if ($cartCsrfError): ?>
+                <div class="cart-notice cart-notice--warning" role="alert">
+                    Sesión caducada. Recarga la página e inténtalo de nuevo.
+                </div>
+            <?php elseif ($checkoutNeedsLogin): ?>
                 <div class="cart-notice cart-notice--warning" role="alert">
                     Para finalizar la compra tienes que iniciar sesión. Tu carrito se mantiene guardado mientras tanto.
                     <a href="login.php?redirect=carrito.php" class="cart-notice__link">Iniciar sesión</a>
@@ -94,6 +96,7 @@ require_once __DIR__ . '/includes/header.php';
             <?php else: ?>
                 <div class="cart-layout">
                     <form class="cart-items" action="carrito.php" method="post">
+                        <input type="hidden" name="csrf_token" value="<?= e(authCsrfToken()) ?>">
                         <input type="hidden" name="action" value="update_quantities">
 
                         <div class="cart-items__header">
@@ -187,6 +190,7 @@ require_once __DIR__ . '/includes/header.php';
 
                     <?php foreach ($cartItems as $item): ?>
                         <form id="remove-product-<?= (int) $item['id'] ?>" action="carrito.php" method="post" hidden>
+                            <input type="hidden" name="csrf_token" value="<?= e(authCsrfToken()) ?>">
                             <input type="hidden" name="action" value="remove">
                             <input type="hidden" name="product_id" value="<?= (int) $item['id'] ?>">
                         </form>
@@ -210,6 +214,7 @@ require_once __DIR__ . '/includes/header.php';
                         </p>
 
                         <form action="carrito.php" method="post" class="cart-summary__checkout-form">
+                            <input type="hidden" name="csrf_token" value="<?= e(authCsrfToken()) ?>">
                             <input type="hidden" name="action" value="checkout">
                             <button class="btn btn--primary cart-summary__checkout" type="submit">
                                 Finalizar compra
@@ -223,6 +228,7 @@ require_once __DIR__ . '/includes/header.php';
                         <?php endif; ?>
 
                         <form action="carrito.php" method="post">
+                            <input type="hidden" name="csrf_token" value="<?= e(authCsrfToken()) ?>">
                             <input type="hidden" name="action" value="clear">
                             <button class="cart-summary__clear" type="submit">
                                 Vaciar carrito

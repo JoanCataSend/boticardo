@@ -6,12 +6,20 @@
   <component name="ChangeListManager">
     <list default="true" id="f7cea184-cd7f-477b-b772-62a3d1e5a784" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/carrito_accion.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/carrito_accion.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/favoritos_accion.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/favoritos_accion.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/carrito.php" beforeDir="false" afterPath="$PROJECT_DIR$/carrito.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/contacto.php" beforeDir="false" afterPath="$PROJECT_DIR$/contacto.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/includes/auth.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/auth.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/includes/cart.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/cart.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/includes/config.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/config.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/includes/favorites.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/favorites.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/includes/footer.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/footer.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/mailer.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/mailer.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/includes/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/header.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/login.php" beforeDir="false" afterPath="$PROJECT_DIR$/login.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/registro.php" beforeDir="false" afterPath="$PROJECT_DIR$/registro.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/styles.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/verificar-email.php" beforeDir="false" afterPath="$PROJECT_DIR$/verificar-email.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -100,6 +108,7 @@
       <workItem from="1782684360289" duration="2477000" />
       <workItem from="1782688232739" duration="623000" />
       <workItem from="1782725487877" duration="1006000" />
+      <workItem from="1782833363427" duration="3936000" />
     </task>
     <servers />
   </component>
