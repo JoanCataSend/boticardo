@@ -6,6 +6,7 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/favorites.php';
+require_once __DIR__ . '/../includes/account.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -25,6 +26,11 @@ if (!authValidateCsrf($csrfToken)) {
         'favorites_count' => favoritesCount(),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
+}
+
+$loggedUserForFavorites = authCurrentUser();
+if ($loggedUserForFavorites) {
+    accountSyncSessionWithDatabase($conn, (int) $loggedUserForFavorites['id']);
 }
 
 $action = isset($_POST['action']) ? trim((string) $_POST['action']) : 'toggle';
@@ -59,6 +65,11 @@ switch ($action) {
     default:
         $isFavorite = favoritesToggle($productId);
         break;
+}
+
+$user = authCurrentUser();
+if ($user) {
+    accountPersistFavoritesFromSession($conn, (int) $user['id']);
 }
 
 $conn->close();

@@ -221,11 +221,37 @@ function getProductoDetalleById(mysqli $conn, int $productId): ?array
     }
 
     try {
-        $descripcionSelect = dbColumnExists($conn, 'productos', 'descripcion')
-            ? 'p.descripcion'
-            : 'NULL AS descripcion';
+        $selectColumns = [
+            'p.id',
+            'p.codigo_sku',
+            'p.nombre',
+            'p.precio',
+            'p.imagen',
+            'p.stock',
+            'p.requiere_receta',
+            'p.categoria_id',
+            'p.laboratorio_id',
+            dbColumnExists($conn, 'productos', 'descripcion') ? 'p.descripcion' : 'NULL AS descripcion',
+            dbColumnExists($conn, 'productos', 'codigo_nacional') ? 'p.codigo_nacional' : 'NULL AS codigo_nacional',
+            dbColumnExists($conn, 'productos', 'principio_activo') ? 'p.principio_activo' : 'NULL AS principio_activo',
+            dbColumnExists($conn, 'productos', 'modo_empleo') ? 'p.modo_empleo' : 'NULL AS modo_empleo',
+            dbColumnExists($conn, 'productos', 'advertencias') ? 'p.advertencias' : 'NULL AS advertencias',
+            dbColumnExists($conn, 'productos', 'contraindicaciones') ? 'p.contraindicaciones' : 'NULL AS contraindicaciones',
+            dbColumnExists($conn, 'productos', 'conservacion') ? 'p.conservacion' : 'NULL AS conservacion',
+            'l.nombre AS marca',
+            'c.nombre AS categoria_nombre',
+        ];
 
-        $stmt = $conn->prepare("\n            SELECT p.id, p.codigo_sku, p.nombre, p.precio, p.imagen, p.stock, p.requiere_receta, p.categoria_id, {$descripcionSelect}, l.nombre AS marca\n            FROM productos p\n            LEFT JOIN laboratorios l ON p.laboratorio_id = l.id\n            WHERE p.id = ?\n            LIMIT 1\n        ");
+        $sql = "
+            SELECT " . implode(', ', $selectColumns) . "
+            FROM productos p
+            LEFT JOIN laboratorios l ON p.laboratorio_id = l.id
+            LEFT JOIN categorias c ON p.categoria_id = c.id
+            WHERE p.id = ?
+            LIMIT 1
+        ";
+
+        $stmt = $conn->prepare($sql);
         $stmt->bind_param('i', $productId);
         $stmt->execute();
         $result = $stmt->get_result();

@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/cart.php';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/account.php';
 require_once __DIR__ . '/includes/db.php';
 
 authEnsureUsuariosTable($conn);
@@ -31,6 +32,11 @@ try {
         authLoginWithApple($conn, $code, isset($_POST['user']) ? (string) $_POST['user'] : null);
     } else {
         throw new RuntimeException('Proveedor no válido.');
+    }
+
+    $loggedUser = authCurrentUser();
+    if ($loggedUser) {
+        accountSyncSessionWithDatabase($conn, (int) $loggedUser['id']);
     }
 
     $conn->close();

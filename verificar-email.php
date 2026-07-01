@@ -6,6 +6,7 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/cart.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/rate_limit.php';
+require_once __DIR__ . '/includes/account.php';
 require_once __DIR__ . '/includes/db.php';
 
 authEnsureUsuariosTable($conn);
@@ -72,6 +73,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($result['ok']) {
                     rateLimitReset('verificacion-codigo-ip', $ipActual);
                     rateLimitReset('verificacion-codigo-email', $emailRateLimit);
+
+                    $loggedUser = authCurrentUser();
+                    if ($loggedUser) {
+                        accountSyncSessionWithDatabase($conn, (int) $loggedUser['id']);
+                    }
 
                     header('Location: ' . $redirect);
                     exit;

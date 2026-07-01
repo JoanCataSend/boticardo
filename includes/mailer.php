@@ -109,11 +109,10 @@ function mailerBuildNewOrderHtml(array $order, array $items): string
         . '<p style="margin:0 0 8px;color:#087f7a;font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:12px;">Nuevo pedido pagado</p>'
         . '<h1 style="margin:0 0 18px;font-size:26px;color:#123c3a;">Pedido #' . mailerEscape($orderNumber) . '</h1>'
         . '<p style="font-size:16px;line-height:1.55;margin:0 0 20px;">Se ha confirmado un pago en Boticardo. Revisa el pedido y prepáralo manualmente desde el panel de administración.</p>'
-        . '<h2 style="font-size:18px;margin:24px 0 10px;color:#123c3a;">Datos de envío</h2>'
+        . '<h2 style="font-size:18px;margin:24px 0 10px;color:#123c3a;">' . mailerEscape(orderDeliveryLabel((string) ($order['metodo_entrega'] ?? 'domicilio'))) . '</h2>'
         . '<div style="background:#f8faf9;border-radius:14px;padding:16px;line-height:1.55;">'
         . '<strong>' . mailerEscape((string) ($order['nombre_envio'] ?? '')) . '</strong><br>'
-        . mailerEscape((string) ($order['direccion_envio'] ?? '')) . '<br>'
-        . mailerEscape((string) ($order['codigo_postal'] ?? '')) . ' ' . mailerEscape((string) ($order['localidad'] ?? '')) . ', ' . mailerEscape((string) ($order['provincia'] ?? '')) . '<br>'
+        . mailerEscape(orderDeliverySummaryText($order)) . '<br>'
         . 'Teléfono: ' . mailerEscape((string) ($order['telefono_envio'] ?? '')) . '<br>'
         . 'Email: ' . mailerEscape((string) ($order['email_envio'] ?? ''))
         . '</div>'

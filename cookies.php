@@ -4,16 +4,29 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/content.php';
 
 $pageTitle = 'Política de cookies | Boticardo';
 $pageDescription = 'Información sobre las cookies utilizadas en Boticardo, su finalidad, duración y cómo puedes configurarlas desde tu navegador.';
 $canonicalUrl = $siteUrl . '/cookies.php';
 
 $lastUpdated = '30/06/2026';
+
+$legalOverride = contentGetPublishedLegalPage($conn, 'cookies');
+if ($legalOverride !== null) {
+    $pageTitle = (string) $legalOverride['titulo'] . ' | Boticardo';
+    $pageDescription = (string) ($legalOverride['descripcion'] ?: $pageDescription);
+}
 ?>
 
 <?php require_once __DIR__ . '/includes/header.php'; ?>
 
+<?php if ($legalOverride !== null): ?>
+    <?php contentRenderLegalOverride($legalOverride, 'cookies', $lastUpdated); ?>
+    <?php require_once __DIR__ . '/includes/footer.php'; ?>
+    <?php exit; ?>
+<?php endif; ?>
 <main id="main-content" class="legal-page">
     <section class="legal-hero">
         <div class="container legal-hero__inner">

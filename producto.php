@@ -56,6 +56,17 @@ $stockLabel = productoStockLabel($producto);
 $stockClass = productoStockClass($producto);
 $stockMaxCompra = max(1, min(99, $stockProducto));
 $categoriaId = isset($producto['categoria_id']) ? (int) $producto['categoria_id'] : null;
+$categoriaProducto = trim((string) ($producto['categoria_nombre'] ?? '')) ?: 'Sin categoría';
+$codigoNacional = trim((string) ($producto['codigo_nacional'] ?? '')) ?: (trim((string) ($producto['codigo_sku'] ?? '')) ?: 'No indicado');
+$principioActivo = trim((string) ($producto['principio_activo'] ?? '')) ?: 'No aplica / no indicado';
+$modoEmpleo = trim((string) ($producto['modo_empleo'] ?? '')) ?: 'Información no disponible. Consulta siempre el prospecto o al equipo farmacéutico si tienes dudas.';
+$advertencias = trim((string) ($producto['advertencias'] ?? '')) ?: 'Información no disponible. Lee el prospecto antes de utilizar el producto.';
+$contraindicaciones = trim((string) ($producto['contraindicaciones'] ?? '')) ?: 'Información no disponible. Consulta con un profesional sanitario si estás embarazada, en tratamiento o tienes patologías previas.';
+$conservacion = trim((string) ($producto['conservacion'] ?? '')) ?: 'Conservar en lugar fresco y seco, alejado de la luz directa y fuera del alcance de los niños, salvo indicación diferente del envase.';
+$stockDisponibleDetalle = $productoDisponible ? $stockProducto . ' unidades disponibles' : 'Agotado temporalmente';
+$productInfoText = static function (?string $value): string {
+    return nl2br(e(trim((string) $value)));
+};
 $productosRelacionados = getProductosRelacionados($conn, $productoId, $categoriaId, 4);
 
 $pageTitle = $nombreProducto . ' | Boticardo';
@@ -81,6 +92,8 @@ $structuredData['@graph'][] = [
     ],
     'image' => APP_BASE_URL . '/' . $imagenProductoPath,
     'description' => strip_tags($descripcionProducto),
+    'sku' => $codigoNacional,
+    'category' => $categoriaProducto,
     'offers' => [
         '@type' => 'Offer',
         'url' => $canonicalUrl,
@@ -196,6 +209,65 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 </div>
             </article>
+
+            <section class="product-pharma-info" aria-labelledby="product-pharma-info-title">
+                <div class="section-header">
+                    <span class="section-header__eyebrow">Ficha farmacéutica</span>
+                    <h2 class="section-header__title" id="product-pharma-info-title">Información del producto</h2>
+                    <p class="section-header__description">Datos útiles para identificar el producto y usarlo correctamente.</p>
+                </div>
+
+                <div class="product-pharma-info__grid">
+                    <article class="product-pharma-info__card">
+                        <span class="product-pharma-info__label">Código nacional</span>
+                        <p class="product-pharma-info__value"><?= e($codigoNacional) ?></p>
+                    </article>
+
+                    <article class="product-pharma-info__card">
+                        <span class="product-pharma-info__label">Marca / laboratorio</span>
+                        <p class="product-pharma-info__value"><?= e($marcaProducto) ?></p>
+                    </article>
+
+                    <article class="product-pharma-info__card">
+                        <span class="product-pharma-info__label">Categoría</span>
+                        <p class="product-pharma-info__value"><?= e($categoriaProducto) ?></p>
+                    </article>
+
+                    <article class="product-pharma-info__card">
+                        <span class="product-pharma-info__label">Stock disponible</span>
+                        <p class="product-pharma-info__value <?= e($stockClass) ?>"><?= e($stockDisponibleDetalle) ?></p>
+                    </article>
+
+                    <article class="product-pharma-info__card product-pharma-info__card--wide">
+                        <span class="product-pharma-info__label">Principio activo</span>
+                        <p class="product-pharma-info__value"><?= $productInfoText($principioActivo) ?></p>
+                    </article>
+
+                    <article class="product-pharma-info__card product-pharma-info__card--wide">
+                        <span class="product-pharma-info__label">Modo de empleo</span>
+                        <p class="product-pharma-info__value"><?= $productInfoText($modoEmpleo) ?></p>
+                    </article>
+
+                    <article class="product-pharma-info__card product-pharma-info__card--wide">
+                        <span class="product-pharma-info__label">Advertencias</span>
+                        <p class="product-pharma-info__value"><?= $productInfoText($advertencias) ?></p>
+                    </article>
+
+                    <article class="product-pharma-info__card product-pharma-info__card--wide">
+                        <span class="product-pharma-info__label">Contraindicaciones</span>
+                        <p class="product-pharma-info__value"><?= $productInfoText($contraindicaciones) ?></p>
+                    </article>
+
+                    <article class="product-pharma-info__card product-pharma-info__card--wide">
+                        <span class="product-pharma-info__label">Conservación</span>
+                        <p class="product-pharma-info__value"><?= $productInfoText($conservacion) ?></p>
+                    </article>
+                </div>
+
+                <p class="product-pharma-info__note">
+                    Esta información es orientativa y no sustituye el consejo farmacéutico ni la lectura del prospecto o etiquetado del producto.
+                </p>
+            </section>
 
             <?php if ($productosRelacionados): ?>
                 <section class="products product-related" aria-labelledby="related-products-title">

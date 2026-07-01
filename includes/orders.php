@@ -45,6 +45,37 @@ function orderColumnExists(mysqli $conn, string $table, string $column): bool
     return ((int) ($row['total'] ?? 0)) > 0;
 }
 
+function orderTableExists(mysqli $conn, string $table): bool
+{
+    $stmt = $conn->prepare('
+        SELECT COUNT(*) AS total
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = ?
+    ');
+    $stmt->bind_param('s', $table);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    $result->free();
+    $stmt->close();
+
+    return ((int) ($row['total'] ?? 0)) > 0;
+}
+
+function orderClearPersistentCartForUser(mysqli $conn, int $userId): void
+{
+    if ($userId <= 0 || !orderTableExists($conn, 'usuario_carrito')) {
+        return;
+    }
+
+    $stmt = $conn->prepare('DELETE FROM usuario_carrito WHERE usuario_id = ?');
+    $stmt->bind_param('i', $userId);
+    $stmt->execute();
+    $stmt->close();
+}
+
+
 function orderEnsurePedidoColumns(mysqli $conn): void
 {
     $conn->query("ALTER TABLE pedidos MODIFY estado ENUM('pendiente','pagado','preparando','enviado','completado','cancelado','fallido') NOT NULL DEFAULT 'pendiente'");
@@ -63,6 +94,10 @@ function orderEnsurePedidoColumns(mysqli $conn): void
 
     if (!orderColumnExists($conn, 'pedidos', 'stock_reservado')) {
         $conn->query('ALTER TABLE pedidos ADD COLUMN stock_reservado TINYINT(1) NOT NULL DEFAULT 0 AFTER tracking_code');
+    }
+
+    if (!orderColumnExists($conn, 'pedidos', 'metodo_entrega')) {
+        $conn->query("ALTER TABLE pedidos ADD COLUMN metodo_entrega ENUM('domicilio','recogida') NOT NULL DEFAULT 'domicilio' AFTER estado");
     }
 }
 
@@ -150,6 +185,61 @@ function orderNotifyAdminIfNeeded(mysqli $conn, int $orderId): bool
     return $sent;
 }
 
+function orderDeliveryMethods(): array
+{
+    return [
+        'domicilio' => 'Envío a domicilio',
+        'recogida' => 'Recoger en farmacia',
+    ];
+}
+
+function orderNormalizeDeliveryMethod(?string $method): string
+{
+    return $method === 'recogida' ? 'recogida' : 'domicilio';
+}
+
+function orderDeliveryLabel(?string $method): string
+{
+    $method = orderNormalizeDeliveryMethod($method);
+    $methods = orderDeliveryMethods();
+
+    return $methods[$method] ?? $methods['domicilio'];
+}
+
+function orderCalculateShippingCost(float $subtotal, ?string $deliveryMethod = 'domicilio'): float
+{
+    $deliveryMethod = orderNormalizeDeliveryMethod($deliveryMethod);
+    if ($deliveryMethod === 'recogida') {
+        return 0.00;
+    }
+
+    $standardCost = defined('ORDER_HOME_SHIPPING_COST') ? (float) ORDER_HOME_SHIPPING_COST : 3.95;
+    $freeFrom = defined('ORDER_FREE_SHIPPING_FROM') ? (float) ORDER_FREE_SHIPPING_FROM : 39.00;
+
+    if ($freeFrom > 0 && $subtotal >= $freeFrom) {
+        return 0.00;
+    }
+
+    return round(max(0.0, $standardCost), 2);
+}
+
+function orderDeliverySummaryText(array $order): string
+{
+    $method = orderNormalizeDeliveryMethod((string) ($order['metodo_entrega'] ?? 'domicilio'));
+
+    if ($method === 'recogida') {
+        return 'Recogida en farmacia. Avisaremos al cliente cuando el pedido esté listo.';
+    }
+
+    $parts = array_filter([
+        (string) ($order['direccion_envio'] ?? ''),
+        trim((string) ($order['codigo_postal'] ?? '') . ' ' . (string) ($order['localidad'] ?? '')),
+        (string) ($order['provincia'] ?? ''),
+    ]);
+
+    return implode(', ', $parts);
+}
+
 function orderCleanText(string $value, int $maxLength): string
 {
     $value = trim(preg_replace('/\s+/u', ' ', $value) ?? '');
@@ -158,7 +248,10 @@ function orderCleanText(string $value, int $maxLength): string
 
 function orderValidateShipping(array $data): array
 {
+    $deliveryMethod = orderNormalizeDeliveryMethod((string) ($data['metodo_entrega'] ?? 'domicilio'));
+
     $shipping = [
+        'metodo_entrega' => $deliveryMethod,
         'nombre_envio' => orderCleanText((string) ($data['nombre_envio'] ?? ''), 160),
         'email_envio' => strtolower(orderCleanText((string) ($data['email_envio'] ?? ''), 190)),
         'telefono_envio' => orderCleanText((string) ($data['telefono_envio'] ?? ''), 30),
@@ -168,6 +261,13 @@ function orderValidateShipping(array $data): array
         'provincia' => orderCleanText((string) ($data['provincia'] ?? ''), 120),
         'pais' => 'ES',
     ];
+
+    if ($deliveryMethod === 'recogida') {
+        $shipping['direccion_envio'] = 'Recogida en farmacia';
+        $shipping['codigo_postal'] = '';
+        $shipping['localidad'] = '';
+        $shipping['provincia'] = '';
+    }
 
     $errors = [];
 
@@ -183,20 +283,22 @@ function orderValidateShipping(array $data): array
         $errors[] = 'Escribe un teléfono válido.';
     }
 
-    if (mb_strlen($shipping['direccion_envio'], 'UTF-8') < 5) {
-        $errors[] = 'Escribe una dirección completa.';
-    }
+    if ($deliveryMethod === 'domicilio') {
+        if (mb_strlen($shipping['direccion_envio'], 'UTF-8') < 5) {
+            $errors[] = 'Escribe una dirección completa.';
+        }
 
-    if (!preg_match('/^[0-9]{5}$/', $shipping['codigo_postal'])) {
-        $errors[] = 'El código postal debe tener 5 números.';
-    }
+        if (!preg_match('/^[0-9]{5}$/', $shipping['codigo_postal'])) {
+            $errors[] = 'El código postal debe tener 5 números.';
+        }
 
-    if (mb_strlen($shipping['localidad'], 'UTF-8') < 2) {
-        $errors[] = 'Escribe la localidad.';
-    }
+        if (mb_strlen($shipping['localidad'], 'UTF-8') < 2) {
+            $errors[] = 'Escribe la localidad.';
+        }
 
-    if (mb_strlen($shipping['provincia'], 'UTF-8') < 2) {
-        $errors[] = 'Escribe la provincia.';
+        if (mb_strlen($shipping['provincia'], 'UTF-8') < 2) {
+            $errors[] = 'Escribe la provincia.';
+        }
     }
 
     return [$shipping, $errors];
@@ -212,7 +314,8 @@ function orderCreatePendingFromCart(mysqli $conn, int $userId, array $shipping, 
     }
 
     $subtotal = round((float) ($cartSummary['subtotal'] ?? 0), 2);
-    $envio = 0.00;
+    $deliveryMethod = orderNormalizeDeliveryMethod((string) ($shipping['metodo_entrega'] ?? 'domicilio'));
+    $envio = orderCalculateShippingCost($subtotal, $deliveryMethod);
     $total = round($subtotal + $envio, 2);
     $publicId = bin2hex(random_bytes(16));
     $currency = strtoupper(defined('STRIPE_CURRENCY') ? STRIPE_CURRENCY : 'eur');
@@ -220,12 +323,18 @@ function orderCreatePendingFromCart(mysqli $conn, int $userId, array $shipping, 
     $conn->begin_transaction();
 
     try {
-        $stmt = $conn->prepare("\n            INSERT INTO pedidos (\n                public_id, usuario_id, estado, subtotal, envio, total, moneda,\n                nombre_envio, email_envio, telefono_envio, direccion_envio, codigo_postal, localidad, provincia, pais, stock_reservado\n            ) VALUES (?, ?, 'pendiente', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ES', 1)\n        ");
+        $stmt = $conn->prepare("
+            INSERT INTO pedidos (
+                public_id, usuario_id, estado, metodo_entrega, subtotal, envio, total, moneda,
+                nombre_envio, email_envio, telefono_envio, direccion_envio, codigo_postal, localidad, provincia, pais, stock_reservado
+            ) VALUES (?, ?, 'pendiente', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ES', 1)
+        ");
 
         $stmt->bind_param(
-            'sidddssssssss',
+            'sisdddssssssss',
             $publicId,
             $userId,
+            $deliveryMethod,
             $subtotal,
             $envio,
             $total,
@@ -287,6 +396,7 @@ function orderCreatePendingFromCart(mysqli $conn, int $userId, array $shipping, 
     return [
         'id' => $orderId,
         'public_id' => $publicId,
+        'metodo_entrega' => $deliveryMethod,
         'subtotal' => $subtotal,
         'envio' => $envio,
         'total' => $total,
@@ -520,6 +630,7 @@ function orderMarkPaidFromStripeSession(mysqli $conn, array $session, string $ev
 
         if ((string) $order['estado'] === 'pagado') {
             $orderId = (int) $order['id'];
+            orderClearPersistentCartForUser($conn, (int) ($order['usuario_id'] ?? 0));
             $conn->commit();
             try {
                 orderNotifyAdminIfNeeded($conn, $orderId);
@@ -541,6 +652,7 @@ function orderMarkPaidFromStripeSession(mysqli $conn, array $session, string $ev
         $stmt->close();
 
         orderIncreaseSalesForOrder($conn, $orderId);
+        orderClearPersistentCartForUser($conn, (int) ($order['usuario_id'] ?? 0));
 
         $conn->commit();
 

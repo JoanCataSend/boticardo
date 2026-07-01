@@ -4,6 +4,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/content.php';
 
 $pageTitle = 'Política de privacidad | Boticardo';
 $pageDescription = 'Política de privacidad de Boticardo: qué datos recogemos, para qué los usamos, base legal, conservación y derechos de las personas usuarias.';
@@ -11,10 +13,21 @@ $canonicalUrl = $siteUrl . '/privacidad.php';
 
 $fullAddress = $streetAddress . ', ' . $postalCode . ' ' . $locality . ', ' . $region . ', España';
 $lastUpdated = '30/06/2026';
+
+$legalOverride = contentGetPublishedLegalPage($conn, 'privacidad');
+if ($legalOverride !== null) {
+    $pageTitle = (string) $legalOverride['titulo'] . ' | Boticardo';
+    $pageDescription = (string) ($legalOverride['descripcion'] ?: $pageDescription);
+}
 ?>
 
 <?php require_once __DIR__ . '/includes/header.php'; ?>
 
+<?php if ($legalOverride !== null): ?>
+    <?php contentRenderLegalOverride($legalOverride, 'privacidad', $lastUpdated); ?>
+    <?php require_once __DIR__ . '/includes/footer.php'; ?>
+    <?php exit; ?>
+<?php endif; ?>
 <main id="main-content" class="legal-page">
     <section class="legal-hero">
         <div class="container legal-hero__inner">
@@ -41,7 +54,7 @@ $lastUpdated = '30/06/2026';
             <article class="legal-card">
                 <div class="legal-alert legal-alert--warning">
                     <strong>Importante:</strong>
-                    No se que hay que poner en  esta parte asi que la dejo asii y ya despues lo cambiaremos
+                    esta política está preparada con los datos visibles del proyecto. Antes de publicarla, completa NIF/CIF, datos colegiales y revisa proveedores reales de hosting, email, analítica y pagos.
                 </div>
 
                 <section id="responsable" class="legal-block">

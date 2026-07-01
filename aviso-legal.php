@@ -4,6 +4,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/content.php';
 
 $pageTitle = 'Aviso legal | Boticardo';
 $pageDescription = 'Información legal de Boticardo: titularidad, datos de contacto, condiciones de uso y responsabilidad del sitio web.';
@@ -11,10 +13,21 @@ $canonicalUrl = $siteUrl . '/aviso-legal.php';
 
 $fullAddress = $streetAddress . ', ' . $postalCode . ' ' . $locality . ', ' . $region . ', España';
 $lastUpdated = '30/06/2026';
+
+$legalOverride = contentGetPublishedLegalPage($conn, 'aviso-legal');
+if ($legalOverride !== null) {
+    $pageTitle = (string) $legalOverride['titulo'] . ' | Boticardo';
+    $pageDescription = (string) ($legalOverride['descripcion'] ?: $pageDescription);
+}
 ?>
 
 <?php require_once __DIR__ . '/includes/header.php'; ?>
 
+<?php if ($legalOverride !== null): ?>
+    <?php contentRenderLegalOverride($legalOverride, 'aviso-legal', $lastUpdated); ?>
+    <?php require_once __DIR__ . '/includes/footer.php'; ?>
+    <?php exit; ?>
+<?php endif; ?>
 <main id="main-content" class="legal-page">
     <section class="legal-hero">
         <div class="container legal-hero__inner">

@@ -5,6 +5,7 @@ require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/cart.php';
+require_once __DIR__ . '/../includes/account.php';
 require_once __DIR__ . '/../includes/db.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -34,9 +35,22 @@ if (!authValidateCsrf($csrfToken)) {
     ], 403);
 }
 
+$loggedUserForCart = authCurrentUser();
+if ($loggedUserForCart) {
+    accountSyncSessionWithDatabase($conn, (int) $loggedUserForCart['id']);
+}
+
 $action = (string) ($_POST['action'] ?? '');
 $productId = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
 $quantity = isset($_POST['quantity']) ? (int) $_POST['quantity'] : 1;
+
+function cartPersistForLoggedUser(mysqli $conn): void
+{
+    $user = authCurrentUser();
+    if ($user) {
+        accountPersistCartFromSession($conn, (int) $user['id']);
+    }
+}
 
 try {
     if ($action === 'add') {
@@ -49,6 +63,7 @@ try {
         }
 
         $result = cartAddProductWithStock($conn, $productId, max(1, $quantity));
+        cartPersistForLoggedUser($conn);
 
         cartJsonResponse($result, $result['ok'] ? 200 : 409);
     }
@@ -63,6 +78,7 @@ try {
         }
 
         $result = cartUpdateProductWithStock($conn, $productId, max(0, $quantity));
+        cartPersistForLoggedUser($conn);
 
         cartJsonResponse($result, $result['ok'] ? 200 : 409);
     }
@@ -77,6 +93,7 @@ try {
         }
 
         $cartCount = cartRemoveProduct($productId);
+        cartPersistForLoggedUser($conn);
 
         cartJsonResponse([
             'ok' => true,
@@ -87,6 +104,7 @@ try {
 
     if ($action === 'clear') {
         cartClear();
+        cartPersistForLoggedUser($conn);
 
         cartJsonResponse([
             'ok' => true,

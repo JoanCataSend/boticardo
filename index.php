@@ -4,6 +4,7 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/schema.php';
+require_once __DIR__ . '/includes/content.php';
 /**
  * Declaración para el IDE: Estas variables provienen de config.php y schema.php
  * @var string $pageTitle
@@ -31,6 +32,7 @@ require_once __DIR__ . '/includes/schema.php';
  */
 // Ejecutamos la función para obtener los productos y cerramos la conexión
 $productosMasVendidos = getProductosMasVendidos($conn);
+$bannersPortada = contentGetActiveBanners($conn, 3);
 $conn->close();
 ?>
 
@@ -90,6 +92,39 @@ $conn->close();
             </div>
         </div>
     </section>
+
+    <?php if (!empty($bannersPortada)): ?>
+        <section class="home-banners" aria-labelledby="home-banners-title">
+            <div class="container">
+                <div class="section-header home-banners__header">
+                    <span class="section-header__eyebrow">Promociones</span>
+                    <h2 class="section-header__title" id="home-banners-title">Ofertas y novedades</h2>
+                </div>
+                <div class="home-banners__grid">
+                    <?php foreach ($bannersPortada as $banner): ?>
+                        <?php
+                        $bannerImage = basename((string) ($banner['imagen'] ?? ''));
+                        $bannerLink = trim((string) ($banner['enlace_boton'] ?? '')) ?: 'ofertas.php';
+                        $bannerButton = trim((string) ($banner['texto_boton'] ?? '')) ?: 'Ver más';
+                        ?>
+                        <article class="home-banner-card">
+                            <div class="home-banner-card__content">
+                                <?php if (!empty($banner['etiqueta'])): ?><span class="home-banner-card__tag"><?= e((string) $banner['etiqueta']) ?></span><?php endif; ?>
+                                <h3><?= e((string) $banner['titulo']) ?></h3>
+                                <?php if (!empty($banner['subtitulo'])): ?><p><?= e((string) $banner['subtitulo']) ?></p><?php endif; ?>
+                                <a href="<?= e($bannerLink) ?>" class="btn btn--primary"><?= e($bannerButton) ?></a>
+                            </div>
+                            <?php if ($bannerImage !== ''): ?>
+                                <div class="home-banner-card__image">
+                                    <img src="img/landing/<?= e($bannerImage) ?>" alt="<?= e((string) $banner['titulo']) ?>" loading="lazy" decoding="async">
+                                </div>
+                            <?php endif; ?>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </section>
+    <?php endif; ?>
 
 
     <div class="trust-bar" role="region" aria-label="Nuestras garantías">

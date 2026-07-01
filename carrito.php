@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/cart.php';
+require_once __DIR__ . '/includes/account.php';
 require_once __DIR__ . '/includes/db.php';
 
 $pageTitle = 'Carrito de compra | Boticardo';
@@ -13,6 +14,18 @@ $canonicalUrl = $siteUrl . '/carrito.php';
 
 $checkoutNeedsLogin = false;
 $cartCsrfError = false;
+$currentUser = authCurrentUser();
+if ($currentUser) {
+    accountSyncSessionWithDatabase($conn, (int) $currentUser['id']);
+}
+
+function carritoPersistForLoggedUser(mysqli $conn): void
+{
+    $user = authCurrentUser();
+    if ($user) {
+        accountPersistCartFromSession($conn, (int) $user['id']);
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
@@ -34,14 +47,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        carritoPersistForLoggedUser($conn);
         header('Location: carrito.php?' . ($stockAdjusted ? 'stock_ajustado=1' : 'actualizado=1'));
         exit;
     } elseif ($action === 'remove') {
         cartRemoveProduct((int) ($_POST['product_id'] ?? 0));
+        carritoPersistForLoggedUser($conn);
         header('Location: carrito.php?eliminado=1');
         exit;
     } elseif ($action === 'clear') {
         cartClear();
+        carritoPersistForLoggedUser($conn);
         header('Location: carrito.php?vaciado=1');
         exit;
     } elseif ($action === 'checkout') {
@@ -51,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stockValidation = cartValidateStock($conn);
 
             if (!($stockValidation['ok'] ?? true)) {
+                carritoPersistForLoggedUser($conn);
                 header('Location: carrito.php?stock_ajustado=1');
                 exit;
             }

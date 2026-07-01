@@ -81,6 +81,7 @@ require_once __DIR__ . '/includes/header.php';
 
             <?php if (!$currentUser): ?>
                 <div class="orders-login-card">
+                    <div class="orders-login-card__icon" aria-hidden="true">🔒</div>
                     <h2>Tienes que iniciar sesión</h2>
                     <p>Para consultar tus pedidos necesitas entrar con tu cuenta de Boticardo.</p>
                     <div class="orders-login-card__actions">
@@ -136,14 +137,23 @@ require_once __DIR__ . '/includes/header.php';
                                 </section>
 
                                 <section class="order-card__block">
-                                    <h3>Envío</h3>
-                                    <p class="order-address">
-                                        <strong><?= e((string) ($order['nombre_envio'] ?? '')) ?></strong><br>
-                                        <?= e((string) ($order['direccion_envio'] ?? '')) ?><br>
-                                        <?= e((string) ($order['codigo_postal'] ?? '')) ?> <?= e((string) ($order['localidad'] ?? '')) ?>,
-                                        <?= e((string) ($order['provincia'] ?? '')) ?><br>
-                                        Tel. <?= e((string) ($order['telefono_envio'] ?? '')) ?>
-                                    </p>
+                                    <h3><?= e(orderDeliveryLabel((string) ($order['metodo_entrega'] ?? 'domicilio'))) ?></h3>
+                                    <?php if (orderNormalizeDeliveryMethod((string) ($order['metodo_entrega'] ?? 'domicilio')) === 'recogida'): ?>
+                                        <p class="order-address">
+                                            <strong><?= e((string) ($order['nombre_envio'] ?? '')) ?></strong><br>
+                                            Recogida en farmacia.<br>
+                                            Te avisaremos cuando el pedido esté listo.<br>
+                                            Tel. <?= e((string) ($order['telefono_envio'] ?? '')) ?>
+                                        </p>
+                                    <?php else: ?>
+                                        <p class="order-address">
+                                            <strong><?= e((string) ($order['nombre_envio'] ?? '')) ?></strong><br>
+                                            <?= e((string) ($order['direccion_envio'] ?? '')) ?><br>
+                                            <?= e((string) ($order['codigo_postal'] ?? '')) ?> <?= e((string) ($order['localidad'] ?? '')) ?>,
+                                            <?= e((string) ($order['provincia'] ?? '')) ?><br>
+                                            Tel. <?= e((string) ($order['telefono_envio'] ?? '')) ?>
+                                        </p>
+                                    <?php endif; ?>
                                 </section>
 
                                 <section class="order-card__block">
@@ -155,6 +165,9 @@ require_once __DIR__ . '/includes/header.php';
                                     <?php endif; ?>
                                     <?php if (!empty($order['paid_at'])): ?>
                                         <p class="order-muted">Pago confirmado: <?= e(pedidosFormatDate((string) $order['paid_at'])) ?></p>
+                                    <?php endif; ?>
+                                    <?php if (!empty($order['public_id'])): ?>
+                                        <a class="order-download-link" href="descargar-justificante.php?pedido=<?= e(rawurlencode((string) $order['public_id'])) ?>">Descargar justificante</a>
                                     <?php endif; ?>
                                 </section>
                             </div>

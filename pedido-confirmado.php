@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/orders.php';
+require_once __DIR__ . '/includes/account.php';
 require_once __DIR__ . '/includes/db.php';
 
 $pageTitle = 'Pedido recibido | Boticardo';
@@ -25,6 +26,7 @@ $items = $order ? orderGetItems($conn, (int) $order['id']) : [];
 
 if ($order && (string) $order['estado'] === 'pagado') {
     cartClear();
+    accountPersistCartFromSession($conn, (int) $currentUser['id']);
 }
 
 $conn->close();
@@ -72,14 +74,27 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                     <?php endforeach; ?>
 
+                    <div class="checkout-summary__row">
+                        <span>Entrega</span>
+                        <strong><?= e(orderDeliveryLabel((string) ($order['metodo_entrega'] ?? 'domicilio'))) ?></strong>
+                    </div>
+                    <div class="checkout-summary__row">
+                        <span>Envío</span>
+                        <strong><?= (float) ($order['envio'] ?? 0) === 0.0 ? 'Gratis' : number_format((float) $order['envio'], 2, ',', '.') . ' €' ?></strong>
+                    </div>
                     <div class="checkout-summary__total">
                         <span>Total</span>
                         <strong><?= number_format((float) $order['total'], 2, ',', '.') ?> €</strong>
                     </div>
 
+                    <?php if (orderNormalizeDeliveryMethod((string) ($order['metodo_entrega'] ?? 'domicilio')) === 'recogida'): ?>
+                        <p class="checkout-security-note">Has elegido recoger en farmacia. Te avisaremos por email cuando el pedido esté listo para recoger.</p>
+                    <?php endif; ?>
+
                     <div class="checkout-result-details__actions">
                         <a href="catalogo.php" class="btn btn--outline">Seguir comprando</a>
                         <a href="cuenta.php" class="btn btn--primary">Ir a mi cuenta</a>
+                        <a href="descargar-justificante.php?pedido=<?= e(rawurlencode((string) ($order['public_id'] ?? ''))) ?>" class="btn btn--secondary">Descargar justificante</a>
                     </div>
                 </div>
             <?php endif; ?>

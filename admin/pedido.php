@@ -138,10 +138,15 @@ adminRenderHeader('Pedido #' . (string) $order['public_id'], 'pedidos');
             <p><a href="cliente.php?id=<?= (int) $order['usuario_id'] ?>">Ver ficha de cliente</a></p>
         </div>
         <div>
-            <h3>Dirección de envío</h3>
+            <h3><?= e(orderDeliveryLabel((string) ($order['metodo_entrega'] ?? 'domicilio'))) ?></h3>
             <p><strong><?= e((string) $order['nombre_envio']) ?></strong></p>
-            <p><?= e((string) $order['direccion_envio']) ?></p>
-            <p><?= e((string) $order['codigo_postal']) ?> <?= e((string) $order['localidad']) ?>, <?= e((string) $order['provincia']) ?></p>
+            <?php if (orderNormalizeDeliveryMethod((string) ($order['metodo_entrega'] ?? 'domicilio')) === 'recogida'): ?>
+                <p>Recogida en farmacia. No tiene gastos de envío.</p>
+                <p>Avisar al cliente cuando el pedido esté listo para recoger.</p>
+            <?php else: ?>
+                <p><?= e((string) $order['direccion_envio']) ?></p>
+                <p><?= e((string) $order['codigo_postal']) ?> <?= e((string) $order['localidad']) ?>, <?= e((string) $order['provincia']) ?></p>
+            <?php endif; ?>
             <p>Tel. <?= e((string) $order['telefono_envio']) ?> · <?= e((string) $order['email_envio']) ?></p>
         </div>
         <div>

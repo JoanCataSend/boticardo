@@ -176,8 +176,11 @@ function authSetSession(array $user): void
 {
     boticardoRegenerateSession();
 
+    $userId = (int) $user['id'];
+    unset($_SESSION['boticardo_account_synced_' . $userId]);
+
     $_SESSION[BOTICARDO_USER_SESSION_KEY] = [
-        'id' => (int) $user['id'],
+        'id' => $userId,
         'nombre' => (string) ($user['nombre'] ?? ''),
         'email' => (string) ($user['email'] ?? ''),
         'rol' => (string) ($user['rol'] ?? 'cliente'),
@@ -185,13 +188,19 @@ function authSetSession(array $user): void
     ];
 
     // Compatibilidad con comprobaciones antiguas del carrito.
-    $_SESSION['usuario_id'] = (int) $user['id'];
-    $_SESSION['user_id'] = (int) $user['id'];
+    $_SESSION['usuario_id'] = $userId;
+    $_SESSION['user_id'] = $userId;
     $_SESSION['logged_in'] = true;
 }
 
 function authLogout(): void
 {
+    foreach (array_keys($_SESSION) as $key) {
+        if (is_string($key) && str_starts_with($key, 'boticardo_account_synced_')) {
+            unset($_SESSION[$key]);
+        }
+    }
+
     unset(
         $_SESSION[BOTICARDO_USER_SESSION_KEY],
         $_SESSION['usuario_id'],

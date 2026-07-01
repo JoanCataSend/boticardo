@@ -105,7 +105,12 @@ function adminUpdateOrder(mysqli $conn, int $orderId, string $status, string $no
     $notes = trim($notes);
     $trackingCode = trim($trackingCode);
 
-    $stmt = $conn->prepare('\n        UPDATE pedidos\n        SET estado = ?, admin_notes = ?, tracking_code = ?\n        WHERE id = ?\n        LIMIT 1\n    ');
+    $stmt = $conn->prepare("
+        UPDATE pedidos
+        SET estado = ?, admin_notes = ?, tracking_code = ?
+        WHERE id = ?
+        LIMIT 1
+    ");
     $stmt->bind_param('sssi', $status, $notes, $trackingCode, $orderId);
     $stmt->execute();
     $ok = $stmt->affected_rows >= 0;
@@ -173,6 +178,12 @@ function adminRenderHeader(string $title, string $active = 'dashboard'): void
         'dashboard' => ['Panel', 'index.php'],
         'pedidos' => ['Pedidos', 'pedidos.php'],
         'clientes' => ['Clientes', 'clientes.php'],
+        'productos' => ['Productos', 'productos.php'],
+        'categorias' => ['Categorías', 'categorias.php'],
+        'laboratorios' => ['Laboratorios', 'laboratorios.php'],
+        'cupones' => ['Cupones', 'cupones.php'],
+        'banners' => ['Banners', 'banners.php'],
+        'legales' => ['Legales', 'paginas-legales.php'],
     ];
     ?>
 <!DOCTYPE html>
@@ -185,7 +196,7 @@ function adminRenderHeader(string $title, string $active = 'dashboard'): void
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../styles.css?v=8">
+    <link rel="stylesheet" href="../styles.css?v=9">
 </head>
 <body class="admin-body">
     <header class="admin-topbar">

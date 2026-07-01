@@ -3,10 +3,17 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/schema.php';
+require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/favorites.php';
+require_once __DIR__ . '/includes/account.php';
 
 $pageTitle = 'Mis favoritos | Boticardo';
 $pageDescription = 'Productos guardados como favoritos en Boticardo.';
+$currentUser = authCurrentUser();
+if ($currentUser) {
+    accountSyncSessionWithDatabase($conn, (int) $currentUser['id']);
+}
+
 $productosFavoritos = favoritesProducts($conn);
 $conn->close();
 

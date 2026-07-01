@@ -22,6 +22,10 @@ define('ADMIN_ORDER_EMAIL', getenv('ADMIN_ORDER_EMAIL') ?: $email);
 define('MAIL_FROM_EMAIL', getenv('MAIL_FROM_EMAIL') ?: $email);
 define('MAIL_FROM_NAME', getenv('MAIL_FROM_NAME') ?: $siteName);
 
+// --- ENVÍOS Y RECOGIDA EN FARMACIA ---
+define('ORDER_HOME_SHIPPING_COST', (float) (getenv('ORDER_HOME_SHIPPING_COST') ?: 3.95));
+define('ORDER_FREE_SHIPPING_FROM', (float) (getenv('ORDER_FREE_SHIPPING_FROM') ?: 39.00));
+
 $streetAddress = 'C. Tomás María Ariño, 118';
 $postalCode = '44420';
 $locality = 'Manzanera';

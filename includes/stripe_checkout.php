@@ -35,6 +35,21 @@ function stripeBuildCheckoutPayload(array $order, array $shipping): array
         ];
     }
 
+    $shippingAmount = paymentMoneyToCents((float) ($order['envio'] ?? 0));
+    if ($shippingAmount > 0) {
+        $lineItems[] = [
+            'price_data' => [
+                'currency' => STRIPE_CURRENCY,
+                'product_data' => [
+                    'name' => 'Gastos de envío',
+                    'description' => 'Envío a domicilio',
+                ],
+                'unit_amount' => $shippingAmount,
+            ],
+            'quantity' => 1,
+        ];
+    }
+
     $successUrl = APP_BASE_URL . '/pedido-confirmado.php?pedido=' . rawurlencode((string) $order['public_id']) . '&session_id={CHECKOUT_SESSION_ID}';
     $cancelUrl = APP_BASE_URL . '/pedido-cancelado.php?pedido=' . rawurlencode((string) $order['public_id']);
 
@@ -50,11 +65,13 @@ function stripeBuildCheckoutPayload(array $order, array $shipping): array
         'metadata' => [
             'pedido_id' => (string) $order['id'],
             'public_id' => (string) $order['public_id'],
+            'metodo_entrega' => (string) ($order['metodo_entrega'] ?? 'domicilio'),
         ],
         'payment_intent_data' => [
             'metadata' => [
                 'pedido_id' => (string) $order['id'],
                 'public_id' => (string) $order['public_id'],
+                'metodo_entrega' => (string) ($order['metodo_entrega'] ?? 'domicilio'),
             ],
         ],
         'billing_address_collection' => 'auto',

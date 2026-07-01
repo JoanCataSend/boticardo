@@ -67,8 +67,12 @@ adminRenderHeader('Pedidos', 'pedidos');
                                 <small><?= e((string) ($order['usuario_email'] ?: $order['email_envio'])) ?></small>
                             </td>
                             <td>
-                                <?= e((string) $order['localidad']) ?><br>
-                                <small><?= e((string) $order['codigo_postal']) ?> · <?= e((string) $order['provincia']) ?></small>
+                                <?= e(orderDeliveryLabel((string) ($order['metodo_entrega'] ?? 'domicilio'))) ?><br>
+                                <?php if (orderNormalizeDeliveryMethod((string) ($order['metodo_entrega'] ?? 'domicilio')) === 'recogida'): ?>
+                                    <small>Sin envío</small>
+                                <?php else: ?>
+                                    <small><?= e((string) $order['codigo_postal']) ?> · <?= e((string) $order['provincia']) ?></small>
+                                <?php endif; ?>
                             </td>
                             <td><span class="<?= e(adminStatusClass((string) $order['estado'])) ?>"><?= e(orderStatusLabel((string) $order['estado'])) ?></span></td>
                             <td><?= e(adminFormatMoney((float) $order['total'], (string) $order['moneda'])) ?></td>
