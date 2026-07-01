@@ -166,6 +166,10 @@ $conn->close();
                         $precioNumero = (float) ($producto['precio'] ?? 0);
                         $precioMaquina = number_format($precioNumero, 2, '.', '');
                         $precioVisible = number_format($precioNumero, 2, ',', '.');
+                        $stockProducto = productoStock($producto);
+                        $productoDisponible = $stockProducto > 0;
+                        $stockLabel = productoStockLabel($producto);
+                        $stockClass = productoStockClass($producto);
                         $productUrl = productoUrl($productoId);
                         ?>
                         <article class="product-card" aria-labelledby="producto-<?= md5($nombreProducto) ?>">
@@ -199,6 +203,7 @@ $conn->close();
                                 <div class="product-card__pricing">
                                     <data class="product-card__price" value="<?= e($precioMaquina) ?>"><?= e($precioVisible) ?> €</data>
                                 </div>
+                                <p class="product-card__stock <?= e($stockClass) ?>"><?= e($stockLabel) ?></p>
                             </div>
                             <div class="product-card__footer">
                                 <button
@@ -207,9 +212,14 @@ $conn->close();
                                         aria-label="Añadir <?= e($nombreProducto) ?> al carrito"
                                         data-product-id="<?= $productoId ?>"
                                         data-product-name="<?= e($nombreProducto) ?>"
+                                        <?= $productoDisponible ? '' : 'disabled aria-disabled="true"' ?>
                                 >
+                                    <?php if ($productoDisponible): ?>
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
                                     Añadir al carrito
+                                    <?php else: ?>
+                                    Agotado
+                                    <?php endif; ?>
                                 </button>
                             </div>
                         </article>

@@ -43,6 +43,12 @@ if ($shippingErrors !== []) {
     checkoutRedirectError($shippingErrors[0]);
 }
 
+$stockValidation = cartValidateStock($conn);
+if (!($stockValidation['ok'] ?? true)) {
+    header('Location: ../carrito.php?stock_ajustado=1');
+    exit;
+}
+
 $cartSummary = cartSummary($conn);
 if (($cartSummary['items'] ?? []) === []) {
     header('Location: ../carrito.php');

@@ -4,7 +4,8 @@
             <div class="footer__brand">
                 <p class="footer__brand-name">Boticardo</p>
                 <p class="footer__brand-desc">
-                    algo bonito que pondremos algun dia no tenemos que olvidarnossssss
+                    Tu farmacia de confianza, ahora también online. Más de 10.000 productos
+                    con el asesoramiento de farmacéuticos colegiados.
                 </p>
             </div>
             <div>
@@ -165,11 +166,15 @@
                 })
             });
 
+            const data = await response.json().catch(function () {
+                return { ok: false, message: 'No se pudo añadir el producto al carrito.' };
+            });
+
             if (!response.ok) {
-                throw new Error('No se pudo añadir el producto al carrito.');
+                throw new Error(data.message || 'No se pudo añadir el producto al carrito.');
             }
 
-            return response.json();
+            return data;
         }
 
         addToCartButtons.forEach(function (button) {

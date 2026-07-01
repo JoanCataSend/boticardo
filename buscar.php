@@ -88,6 +88,10 @@ require_once __DIR__ . '/includes/header.php';
                         $precioNumero = (float) ($producto['precio'] ?? 0);
                         $precioMaquina = number_format($precioNumero, 2, '.', '');
                         $precioVisible = number_format($precioNumero, 2, ',', '.');
+                        $stockProducto = productoStock($producto);
+                        $productoDisponible = $stockProducto > 0;
+                        $stockLabel = productoStockLabel($producto);
+                        $stockClass = productoStockClass($producto);
                         $productUrl = productoUrl($productoId);
                         ?>
                         <article class="product-card" aria-labelledby="producto-busqueda-<?= md5((string) $productoId . $nombreProducto) ?>">
@@ -121,6 +125,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div class="product-card__pricing">
                                     <data class="product-card__price" value="<?= e($precioMaquina) ?>"><?= e($precioVisible) ?> €</data>
                                 </div>
+                                <p class="product-card__stock <?= e($stockClass) ?>"><?= e($stockLabel) ?></p>
                             </div>
                             <div class="product-card__footer">
                                 <button
@@ -129,8 +134,9 @@ require_once __DIR__ . '/includes/header.php';
                                     aria-label="Añadir <?= e($nombreProducto) ?> al carrito"
                                     data-product-id="<?= $productoId ?>"
                                     data-product-name="<?= e($nombreProducto) ?>"
+                                    <?= $productoDisponible ? '' : 'disabled aria-disabled="true"' ?>
                                 >
-                                    Añadir al carrito
+                                    <?= $productoDisponible ? 'Añadir al carrito' : 'Agotado' ?>
                                 </button>
                             </div>
                         </article>

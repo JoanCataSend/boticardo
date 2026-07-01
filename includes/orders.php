@@ -60,6 +60,10 @@ function orderEnsurePedidoColumns(mysqli $conn): void
     if (!orderColumnExists($conn, 'pedidos', 'tracking_code')) {
         $conn->query('ALTER TABLE pedidos ADD COLUMN tracking_code VARCHAR(120) NULL AFTER admin_notes');
     }
+
+    if (!orderColumnExists($conn, 'pedidos', 'stock_reservado')) {
+        $conn->query('ALTER TABLE pedidos ADD COLUMN stock_reservado TINYINT(1) NOT NULL DEFAULT 0 AFTER tracking_code');
+    }
 }
 
 function orderAllowedStatuses(): array
@@ -216,7 +220,7 @@ function orderCreatePendingFromCart(mysqli $conn, int $userId, array $shipping, 
     $conn->begin_transaction();
 
     try {
-        $stmt = $conn->prepare("\n            INSERT INTO pedidos (\n                public_id, usuario_id, estado, subtotal, envio, total, moneda,\n                nombre_envio, email_envio, telefono_envio, direccion_envio, codigo_postal, localidad, provincia, pais\n            ) VALUES (?, ?, 'pendiente', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ES')\n        ");
+        $stmt = $conn->prepare("\n            INSERT INTO pedidos (\n                public_id, usuario_id, estado, subtotal, envio, total, moneda,\n                nombre_envio, email_envio, telefono_envio, direccion_envio, codigo_postal, localidad, provincia, pais, stock_reservado\n            ) VALUES (?, ?, 'pendiente', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ES', 1)\n        ");
 
         $stmt->bind_param(
             'sidddssssssss',
@@ -238,6 +242,8 @@ function orderCreatePendingFromCart(mysqli $conn, int $userId, array $shipping, 
         $orderId = (int) $stmt->insert_id;
         $stmt->close();
 
+        $stockStmt = $conn->prepare('SELECT stock FROM productos WHERE id = ? LIMIT 1 FOR UPDATE');
+        $reserveStmt = $conn->prepare('UPDATE productos SET stock = stock - ? WHERE id = ? AND stock >= ?');
         $itemStmt = $conn->prepare("\n            INSERT INTO pedido_items (pedido_id, producto_id, nombre_producto, marca_producto, precio_unitario, cantidad, subtotal)\n            VALUES (?, ?, ?, ?, ?, ?, ?)\n        ");
 
         foreach ($items as $item) {
@@ -248,10 +254,29 @@ function orderCreatePendingFromCart(mysqli $conn, int $userId, array $shipping, 
             $quantity = max(1, (int) $item['quantity']);
             $lineSubtotal = round($unitPrice * $quantity, 2);
 
+            $stockStmt->bind_param('i', $productId);
+            $stockStmt->execute();
+            $stockResult = $stockStmt->get_result();
+            $stockRow = $stockResult->fetch_assoc();
+            $stockResult->free();
+
+            $availableStock = max(0, (int) ($stockRow['stock'] ?? 0));
+            if (!$stockRow || $availableStock < $quantity) {
+                throw new RuntimeException('No hay stock suficiente de ' . $name . '.');
+            }
+
+            $reserveStmt->bind_param('iii', $quantity, $productId, $quantity);
+            $reserveStmt->execute();
+            if ($reserveStmt->affected_rows !== 1) {
+                throw new RuntimeException('No se pudo reservar stock de ' . $name . '.');
+            }
+
             $itemStmt->bind_param('iissdid', $orderId, $productId, $name, $brand, $unitPrice, $quantity, $lineSubtotal);
             $itemStmt->execute();
         }
 
+        $stockStmt->close();
+        $reserveStmt->close();
         $itemStmt->close();
         $conn->commit();
     } catch (Throwable $error) {
@@ -280,10 +305,38 @@ function orderUpdateStripeSession(mysqli $conn, int $orderId, string $sessionId)
 
 function orderMarkFailed(mysqli $conn, int $orderId): void
 {
-    $stmt = $conn->prepare('UPDATE pedidos SET estado = "fallido" WHERE id = ? AND estado = "pendiente"');
-    $stmt->bind_param('i', $orderId);
-    $stmt->execute();
-    $stmt->close();
+    if ($orderId <= 0) {
+        return;
+    }
+
+    orderEnsureTables($conn);
+    $conn->begin_transaction();
+
+    try {
+        $stmt = $conn->prepare('SELECT id, estado, stock_reservado FROM pedidos WHERE id = ? LIMIT 1 FOR UPDATE');
+        $stmt->bind_param('i', $orderId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $order = $result->fetch_assoc() ?: null;
+        $result->free();
+        $stmt->close();
+
+        if ($order && (string) $order['estado'] === 'pendiente') {
+            if ((int) ($order['stock_reservado'] ?? 0) === 1) {
+                orderReleaseReservedStockForOrder($conn, $orderId);
+            }
+
+            $stmt = $conn->prepare('UPDATE pedidos SET estado = "fallido", stock_reservado = 0 WHERE id = ? AND estado = "pendiente"');
+            $stmt->bind_param('i', $orderId);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        $conn->commit();
+    } catch (Throwable $error) {
+        $conn->rollback();
+        throw $error;
+    }
 }
 
 function orderGetByPublicIdForUser(mysqli $conn, string $publicId, int $userId): ?array
@@ -319,12 +372,98 @@ function orderGetItems(mysqli $conn, int $orderId): array
     return $items;
 }
 
+function orderReleaseReservedStockForOrder(mysqli $conn, int $orderId): void
+{
+    if ($orderId <= 0) {
+        return;
+    }
+
+    $items = orderGetItems($conn, $orderId);
+    if ($items === []) {
+        return;
+    }
+
+    $stmt = $conn->prepare('UPDATE productos SET stock = stock + ? WHERE id = ?');
+
+    foreach ($items as $item) {
+        $quantity = max(0, (int) ($item['cantidad'] ?? 0));
+        $productId = (int) ($item['producto_id'] ?? 0);
+
+        if ($quantity <= 0 || $productId <= 0) {
+            continue;
+        }
+
+        $stmt->bind_param('ii', $quantity, $productId);
+        $stmt->execute();
+    }
+
+    $stmt->close();
+}
+
+function orderIncreaseSalesForOrder(mysqli $conn, int $orderId): void
+{
+    if ($orderId <= 0) {
+        return;
+    }
+
+    $items = orderGetItems($conn, $orderId);
+    if ($items === []) {
+        return;
+    }
+
+    $stmt = $conn->prepare('UPDATE productos SET ventas_totales = ventas_totales + ? WHERE id = ?');
+
+    foreach ($items as $item) {
+        $quantity = max(0, (int) ($item['cantidad'] ?? 0));
+        $productId = (int) ($item['producto_id'] ?? 0);
+
+        if ($quantity <= 0 || $productId <= 0) {
+            continue;
+        }
+
+        $stmt->bind_param('ii', $quantity, $productId);
+        $stmt->execute();
+    }
+
+    $stmt->close();
+}
+
 function orderCancelPendingForUser(mysqli $conn, string $publicId, int $userId): void
 {
-    $stmt = $conn->prepare('UPDATE pedidos SET estado = "cancelado" WHERE public_id = ? AND usuario_id = ? AND estado = "pendiente"');
-    $stmt->bind_param('si', $publicId, $userId);
-    $stmt->execute();
-    $stmt->close();
+    if ($publicId === '' || $userId <= 0) {
+        return;
+    }
+
+    orderEnsureTables($conn);
+    $conn->begin_transaction();
+
+    try {
+        $stmt = $conn->prepare('SELECT id, estado, stock_reservado FROM pedidos WHERE public_id = ? AND usuario_id = ? LIMIT 1 FOR UPDATE');
+        $stmt->bind_param('si', $publicId, $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $order = $result->fetch_assoc() ?: null;
+        $result->free();
+        $stmt->close();
+
+        if ($order && (string) $order['estado'] === 'pendiente') {
+            $orderId = (int) $order['id'];
+
+            if ((int) ($order['stock_reservado'] ?? 0) === 1) {
+                orderReleaseReservedStockForOrder($conn, $orderId);
+            }
+
+            $stmt = $conn->prepare('UPDATE pedidos SET estado = "cancelado", stock_reservado = 0 WHERE id = ? AND estado = "pendiente"');
+            $stmt->bind_param('i', $orderId);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        $conn->commit();
+    } catch (Throwable $error) {
+        $conn->rollback();
+        throw $error;
+    }
 }
 
 function orderRecordStripeEvent(mysqli $conn, string $eventId, string $eventType): bool
@@ -390,11 +529,18 @@ function orderMarkPaidFromStripeSession(mysqli $conn, array $session, string $ev
             return true;
         }
 
-        $stmt = $conn->prepare("\n            UPDATE pedidos\n            SET estado = 'pagado',\n                stripe_checkout_session_id = ?,\n                stripe_payment_intent = ?,\n                stripe_payment_method_types = ?,\n                stripe_event_id = ?,\n                paid_at = NOW()\n            WHERE id = ?\n        ");
+        if ((string) $order['estado'] !== 'pendiente') {
+            $conn->commit();
+            return false;
+        }
+
+        $stmt = $conn->prepare("\n            UPDATE pedidos\n            SET estado = 'pagado',\n                stripe_checkout_session_id = ?,\n                stripe_payment_intent = ?,\n                stripe_payment_method_types = ?,\n                stripe_event_id = ?,\n                paid_at = NOW(),\n                stock_reservado = 0\n            WHERE id = ?\n        ");
         $orderId = (int) $order['id'];
         $stmt->bind_param('ssssi', $sessionId, $paymentIntent, $methodTypes, $eventId, $orderId);
         $stmt->execute();
         $stmt->close();
+
+        orderIncreaseSalesForOrder($conn, $orderId);
 
         $conn->commit();
 

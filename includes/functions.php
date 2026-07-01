@@ -32,7 +32,7 @@ function getProductosMasVendidos(mysqli $conn): array
     $productos = [];
     try {
         $sqlMasVendidos = "
-            SELECT p.id, p.nombre, p.precio, p.imagen, l.nombre AS marca
+            SELECT p.id, p.nombre, p.precio, p.imagen, p.stock, l.nombre AS marca
             FROM productos p
             LEFT JOIN laboratorios l ON p.laboratorio_id = l.id
             ORDER BY p.ventas_totales DESC
@@ -132,7 +132,7 @@ function getAllProductos(mysqli $conn, ?int $categoria_id = null, ?float $min_pr
 
     try {
         $sql = "
-            SELECT p.id, p.nombre, p.precio, p.imagen, l.nombre AS marca
+            SELECT p.id, p.nombre, p.precio, p.imagen, p.stock, l.nombre AS marca
             FROM productos p
             LEFT JOIN laboratorios l ON p.laboratorio_id = l.id
             WHERE 1=1
@@ -192,7 +192,7 @@ function getProductoById(mysqli $conn, int $productId): ?array
 
     try {
         $stmt = $conn->prepare("
-            SELECT p.id, p.nombre, p.precio, p.imagen, l.nombre AS marca
+            SELECT p.id, p.nombre, p.precio, p.imagen, p.stock, l.nombre AS marca
             FROM productos p
             LEFT JOIN laboratorios l ON p.laboratorio_id = l.id
             WHERE p.id = ?
@@ -225,7 +225,7 @@ function getProductoDetalleById(mysqli $conn, int $productId): ?array
             ? 'p.descripcion'
             : 'NULL AS descripcion';
 
-        $stmt = $conn->prepare("\n            SELECT p.id, p.nombre, p.precio, p.imagen, p.categoria_id, {$descripcionSelect}, l.nombre AS marca\n            FROM productos p\n            LEFT JOIN laboratorios l ON p.laboratorio_id = l.id\n            WHERE p.id = ?\n            LIMIT 1\n        ");
+        $stmt = $conn->prepare("\n            SELECT p.id, p.codigo_sku, p.nombre, p.precio, p.imagen, p.stock, p.requiere_receta, p.categoria_id, {$descripcionSelect}, l.nombre AS marca\n            FROM productos p\n            LEFT JOIN laboratorios l ON p.laboratorio_id = l.id\n            WHERE p.id = ?\n            LIMIT 1\n        ");
         $stmt->bind_param('i', $productId);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -252,10 +252,10 @@ function getProductosRelacionados(mysqli $conn, int $productId, ?int $categoriaI
 
     try {
         if ($categoriaId !== null && $categoriaId > 0) {
-            $stmt = $conn->prepare("\n                SELECT p.id, p.nombre, p.precio, p.imagen, l.nombre AS marca\n                FROM productos p\n                LEFT JOIN laboratorios l ON p.laboratorio_id = l.id\n                WHERE p.id <> ? AND p.categoria_id = ?\n                ORDER BY p.ventas_totales DESC, p.nombre ASC\n                LIMIT ?\n            ");
+            $stmt = $conn->prepare("\n                SELECT p.id, p.nombre, p.precio, p.imagen, p.stock, l.nombre AS marca\n                FROM productos p\n                LEFT JOIN laboratorios l ON p.laboratorio_id = l.id\n                WHERE p.id <> ? AND p.categoria_id = ?\n                ORDER BY p.ventas_totales DESC, p.nombre ASC\n                LIMIT ?\n            ");
             $stmt->bind_param('iii', $productId, $categoriaId, $limit);
         } else {
-            $stmt = $conn->prepare("\n                SELECT p.id, p.nombre, p.precio, p.imagen, l.nombre AS marca\n                FROM productos p\n                LEFT JOIN laboratorios l ON p.laboratorio_id = l.id\n                WHERE p.id <> ?\n                ORDER BY p.ventas_totales DESC, p.nombre ASC\n                LIMIT ?\n            ");
+            $stmt = $conn->prepare("\n                SELECT p.id, p.nombre, p.precio, p.imagen, p.stock, l.nombre AS marca\n                FROM productos p\n                LEFT JOIN laboratorios l ON p.laboratorio_id = l.id\n                WHERE p.id <> ?\n                ORDER BY p.ventas_totales DESC, p.nombre ASC\n                LIMIT ?\n            ");
             $stmt->bind_param('ii', $productId, $limit);
         }
 
@@ -273,6 +273,51 @@ function getProductosRelacionados(mysqli $conn, int $productId, ?int $categoriaI
     }
 
     return $productos;
+}
+
+
+/** Devuelve el stock seguro de un producto. */
+function productoStock(array $producto): int
+{
+    return max(0, (int) ($producto['stock'] ?? 0));
+}
+
+/** Indica si un producto se puede comprar. */
+function productoDisponible(array $producto): bool
+{
+    return productoStock($producto) > 0;
+}
+
+/** Texto visible para el estado de stock. */
+function productoStockLabel(array $producto): string
+{
+    $stock = productoStock($producto);
+
+    if ($stock <= 0) {
+        return 'Agotado temporalmente';
+    }
+
+    if ($stock <= 5) {
+        return 'Últimas ' . $stock . ' unidades';
+    }
+
+    return 'Disponible';
+}
+
+/** Clase CSS para el estado de stock. */
+function productoStockClass(array $producto): string
+{
+    $stock = productoStock($producto);
+
+    if ($stock <= 0) {
+        return 'product-stock--out';
+    }
+
+    if ($stock <= 5) {
+        return 'product-stock--low';
+    }
+
+    return 'product-stock--ok';
 }
 
 /** URL interna de ficha de producto. */
@@ -375,7 +420,7 @@ function searchProductos(mysqli $conn, string $query, int $limit = 48): array
 
     try {
         $sql = "
-            SELECT p.id, p.nombre, p.precio, p.imagen, l.nombre AS marca
+            SELECT p.id, p.nombre, p.precio, p.imagen, p.stock, l.nombre AS marca
             FROM productos p
             LEFT JOIN laboratorios l ON p.laboratorio_id = l.id
             ORDER BY p.nombre ASC

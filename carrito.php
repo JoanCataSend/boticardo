@@ -22,13 +22,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'update_quantities') {
         $quantities = $_POST['quantity'] ?? [];
 
+        $stockAdjusted = false;
+
         if (is_array($quantities)) {
             foreach ($quantities as $productId => $quantity) {
-                cartUpdateProduct((int) $productId, (int) $quantity);
+                $updateResult = cartUpdateProductWithStock($conn, (int) $productId, (int) $quantity);
+
+                if (!$updateResult['ok']) {
+                    $stockAdjusted = true;
+                }
             }
         }
 
-        header('Location: carrito.php?actualizado=1');
+        header('Location: carrito.php?' . ($stockAdjusted ? 'stock_ajustado=1' : 'actualizado=1'));
         exit;
     } elseif ($action === 'remove') {
         cartRemoveProduct((int) ($_POST['product_id'] ?? 0));
@@ -42,6 +48,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!isUserLoggedIn()) {
             $checkoutNeedsLogin = true;
         } else {
+            $stockValidation = cartValidateStock($conn);
+
+            if (!($stockValidation['ok'] ?? true)) {
+                header('Location: carrito.php?stock_ajustado=1');
+                exit;
+            }
+
             header('Location: checkout.php');
             exit;
         }
@@ -85,6 +98,10 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="cart-notice" role="status">Producto eliminado del carrito.</div>
             <?php elseif (isset($_GET['vaciado'])): ?>
                 <div class="cart-notice" role="status">El carrito se ha vaciado.</div>
+            <?php elseif (isset($_GET['stock_ajustado'])): ?>
+                <div class="cart-notice cart-notice--warning" role="alert">
+                    Hemos actualizado el carrito porque algún producto no tenía suficiente stock.
+                </div>
             <?php endif; ?>
 
             <?php if ($cartItems === []): ?>
@@ -112,6 +129,7 @@ require_once __DIR__ . '/includes/header.php';
                             $productImage = basename((string) ($item['imagen'] ?? 'placeholder.jpg'));
                             $productPrice = (float) $item['precio'];
                             $productQuantity = (int) $item['quantity'];
+                            $productStock = max(0, (int) ($item['stock'] ?? 0));
                             $productSubtotal = (float) $item['subtotal'];
                             ?>
                             <article class="cart-item">
@@ -129,6 +147,7 @@ require_once __DIR__ . '/includes/header.php';
                                     <span class="cart-item__brand"><?= e($productBrand) ?></span>
                                     <h3 class="cart-item__name"><?= e($productName) ?></h3>
                                     <p class="cart-item__price"><?= number_format($productPrice, 2, ',', '.') ?> € / unidad</p>
+                                    <p class="cart-item__stock">Stock disponible: <?= $productStock ?></p>
                                 </div>
 
                                 <div class="cart-item__quantity">
@@ -149,7 +168,7 @@ require_once __DIR__ . '/includes/header.php';
                                             name="quantity[<?= $productId ?>]"
                                             type="number"
                                             min="0"
-                                            max="99"
+                                            max="<?= min(99, $productStock) ?>"
                                             value="<?= $productQuantity ?>"
                                             inputmode="numeric"
                                             data-quantity-input

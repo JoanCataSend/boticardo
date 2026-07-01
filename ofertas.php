@@ -174,6 +174,10 @@ require_once __DIR__ . '/includes/header.php';
                             ? $etiquetaOferta
                             : ($descuento !== null ? '-' . rtrim(rtrim(number_format((float) $descuento, 1, ',', '.'), '0'), ',') . '%' : 'Oferta');
                         $fechaFinVisible = ofertaFechaFinVisible($producto['oferta_fin'] ?? null);
+                        $stockProducto = productoStock($producto);
+                        $productoDisponible = $stockProducto > 0;
+                        $stockLabel = productoStockLabel($producto);
+                        $stockClass = productoStockClass($producto);
                         $productUrl = productoUrl($productoId);
                         ?>
                         <article class="product-card product-card--offer">
@@ -217,6 +221,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <?php if ($fechaFinVisible !== null): ?>
                                     <p class="product-card__offer-date">Oferta válida hasta el <?= e($fechaFinVisible) ?></p>
                                 <?php endif; ?>
+                                <p class="product-card__stock <?= e($stockClass) ?>"><?= e($stockLabel) ?></p>
                             </div>
                             <div class="product-card__footer" style="padding: 0 0.95rem 0.95rem;">
                                 <button
@@ -224,8 +229,9 @@ require_once __DIR__ . '/includes/header.php';
                                     type="button"
                                     data-product-id="<?= $productoId ?>"
                                     data-product-name="<?= e($nombreProducto) ?>"
+                                    <?= $productoDisponible ? '' : 'disabled aria-disabled="true"' ?>
                                 >
-                                    Añadir al carrito
+                                    <?= $productoDisponible ? 'Añadir al carrito' : 'Agotado' ?>
                                 </button>
                             </div>
                         </article>

@@ -48,27 +48,9 @@ try {
             ], 400);
         }
 
-        $product = getProductoById($conn, $productId);
+        $result = cartAddProductWithStock($conn, $productId, max(1, $quantity));
 
-        if (!$product) {
-            cartJsonResponse([
-                'ok' => false,
-                'message' => 'Este producto ya no está disponible.',
-                'cart_count' => cartTotalQuantity(),
-            ], 404);
-        }
-
-        $cartCount = cartAddProduct($productId, max(1, $quantity));
-
-        cartJsonResponse([
-            'ok' => true,
-            'message' => 'Producto añadido al carrito.',
-            'cart_count' => $cartCount,
-            'product' => [
-                'id' => (int) $product['id'],
-                'name' => (string) $product['nombre'],
-            ],
-        ]);
+        cartJsonResponse($result, $result['ok'] ? 200 : 409);
     }
 
     if ($action === 'update') {
@@ -80,13 +62,9 @@ try {
             ], 400);
         }
 
-        $cartCount = cartUpdateProduct($productId, max(0, $quantity));
+        $result = cartUpdateProductWithStock($conn, $productId, max(0, $quantity));
 
-        cartJsonResponse([
-            'ok' => true,
-            'message' => 'Carrito actualizado.',
-            'cart_count' => $cartCount,
-        ]);
+        cartJsonResponse($result, $result['ok'] ? 200 : 409);
     }
 
     if ($action === 'remove') {

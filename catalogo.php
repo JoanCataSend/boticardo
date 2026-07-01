@@ -69,6 +69,10 @@ require_once __DIR__ . '/includes/header.php';
                                 $precioNumero = (float) ($producto['precio'] ?? 0);
                                 $precioMaquina = number_format($precioNumero, 2, '.', '');
                                 $precioVisible = number_format($precioNumero, 2, ',', '.');
+                                $stockProducto = productoStock($producto);
+                                $productoDisponible = $stockProducto > 0;
+                                $stockLabel = productoStockLabel($producto);
+                                $stockClass = productoStockClass($producto);
                                 $productUrl = productoUrl($productoId);
                                 ?>
                                 <article class="product-card">
@@ -100,6 +104,7 @@ require_once __DIR__ . '/includes/header.php';
                                         <span class="product-card__brand"><?= e($marcaProducto) ?></span>
                                         <h2 class="product-card__name"><a href="<?= e($productUrl) ?>" class="product-card__name-link"><?= e($nombreProducto) ?></a></h2>
                                         <p class="product-card__price"><?= e($precioVisible) ?> €</p>
+                                        <p class="product-card__stock <?= e($stockClass) ?>"><?= e($stockLabel) ?></p>
                                     </div>
                                     <div class="product-card__footer" style="padding: 0 0.95rem 0.95rem;">
                                         <button
@@ -107,8 +112,9 @@ require_once __DIR__ . '/includes/header.php';
                                             type="button"
                                             data-product-id="<?= $productoId ?>"
                                             data-product-name="<?= e($nombreProducto) ?>"
+                                            <?= $productoDisponible ? '' : 'disabled aria-disabled="true"' ?>
                                         >
-                                            Añadir al carrito
+                                            <?= $productoDisponible ? 'Añadir al carrito' : 'Agotado' ?>
                                         </button>
                                     </div>
                                 </article>

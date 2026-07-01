@@ -50,6 +50,11 @@ $imagenProductoPath = 'img/productos/' . $imagenProducto;
 $precioNumero = (float) ($producto['precio'] ?? 0);
 $precioMaquina = number_format($precioNumero, 2, '.', '');
 $precioVisible = number_format($precioNumero, 2, ',', '.');
+$stockProducto = productoStock($producto);
+$productoDisponible = $stockProducto > 0;
+$stockLabel = productoStockLabel($producto);
+$stockClass = productoStockClass($producto);
+$stockMaxCompra = max(1, min(99, $stockProducto));
 $categoriaId = isset($producto['categoria_id']) ? (int) $producto['categoria_id'] : null;
 $productosRelacionados = getProductosRelacionados($conn, $productoId, $categoriaId, 4);
 
@@ -81,7 +86,7 @@ $structuredData['@graph'][] = [
         'url' => $canonicalUrl,
         'priceCurrency' => 'EUR',
         'price' => $precioMaquina,
-        'availability' => 'https://schema.org/InStock',
+        'availability' => $productoDisponible ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
         'seller' => ['@id' => $siteUrl . '/#pharmacy'],
     ],
 ];
@@ -135,6 +140,13 @@ require_once __DIR__ . '/includes/header.php';
                         <span class="product-detail__tax">IVA incluido</span>
                     </div>
 
+                    <p class="product-detail__stock <?= e($stockClass) ?>">
+                        <?= e($stockLabel) ?>
+                        <?php if ($stockProducto > 5): ?>
+                            <span>Stock disponible: <?= $stockProducto ?></span>
+                        <?php endif; ?>
+                    </p>
+
                     <p class="product-detail__summary">
                         <?= e($resumenProducto) ?>
                     </p>
@@ -157,7 +169,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="product-detail__buy-box">
                         <label class="product-detail__quantity" for="product-quantity">
                             <span>Cantidad</span>
-                            <input id="product-quantity" type="number" min="1" max="99" value="1" inputmode="numeric" />
+                            <input id="product-quantity" type="number" min="1" max="<?= $stockMaxCompra ?>" value="1" inputmode="numeric" <?= $productoDisponible ? '' : 'disabled' ?> />
                         </label>
 
                         <button
@@ -167,9 +179,14 @@ require_once __DIR__ . '/includes/header.php';
                             data-product-id="<?= $productoId ?>"
                             data-product-name="<?= e($nombreProducto) ?>"
                             data-quantity-input="product-quantity"
+                            <?= $productoDisponible ? '' : 'disabled aria-disabled="true"' ?>
                         >
+                            <?php if ($productoDisponible): ?>
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
                             Añadir al carrito
+                            <?php else: ?>
+                            Agotado temporalmente
+                            <?php endif; ?>
                         </button>
                     </div>
 
@@ -197,6 +214,10 @@ require_once __DIR__ . '/includes/header.php';
                             $relacionadoPrecioNumero = (float) ($relacionado['precio'] ?? 0);
                             $relacionadoPrecioMaquina = number_format($relacionadoPrecioNumero, 2, '.', '');
                             $relacionadoPrecioVisible = number_format($relacionadoPrecioNumero, 2, ',', '.');
+                            $relacionadoStock = productoStock($relacionado);
+                            $relacionadoDisponible = $relacionadoStock > 0;
+                            $relacionadoStockLabel = productoStockLabel($relacionado);
+                            $relacionadoStockClass = productoStockClass($relacionado);
                             $relacionadoUrl = productoUrl($relacionadoId);
                             ?>
                             <article class="product-card" aria-labelledby="relacionado-<?= md5((string) $relacionadoId . $relacionadoNombre) ?>">
@@ -232,6 +253,7 @@ require_once __DIR__ . '/includes/header.php';
                                     <div class="product-card__pricing">
                                         <data class="product-card__price" value="<?= e($relacionadoPrecioMaquina) ?>"><?= e($relacionadoPrecioVisible) ?> €</data>
                                     </div>
+                                    <p class="product-card__stock <?= e($relacionadoStockClass) ?>"><?= e($relacionadoStockLabel) ?></p>
                                 </div>
                                 <div class="product-card__footer">
                                     <button
@@ -240,8 +262,9 @@ require_once __DIR__ . '/includes/header.php';
                                         aria-label="Añadir <?= e($relacionadoNombre) ?> al carrito"
                                         data-product-id="<?= $relacionadoId ?>"
                                         data-product-name="<?= e($relacionadoNombre) ?>"
+                                        <?= $relacionadoDisponible ? '' : 'disabled aria-disabled="true"' ?>
                                     >
-                                        Añadir al carrito
+                                        <?= $relacionadoDisponible ? 'Añadir al carrito' : 'Agotado' ?>
                                     </button>
                                 </div>
                             </article>
